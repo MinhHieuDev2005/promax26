@@ -1,4 +1,51 @@
-# HEXUDON benchmark and deployment client
+# PROMAX26 - HEXUDON PROCON 2026 CONTROL CENTER & MULTI-SOLVER
+
+Bộ công cụ thi đấu và trung tâm điều khiển chiến thuật toàn diện cho cuộc thi Procon 2026 (Hexudon). Tích hợp giao diện đồ họa GUI, đầy đủ các solver thuật toán đỉnh cao và bộ runner tự động hóa thi đấu.
+
+---
+
+## ⚡ Hướng dẫn chạy nhanh (Quick Start)
+
+Dự án đã được tích hợp sẵn toàn bộ file thực thi C++ trong thư mục `bin/` (`bin/hexudon.exe` và `bin/hexudon_runner.exe`). Bạn **không cần cài đặt CMake, C++ compiler hay thư viện nặng nào** nếu chỉ cần thi đấu!
+
+### Bước 1: Clone repository
+```bash
+git clone https://github.com/MinhHieuDev2005/promax26.git
+cd promax26
+```
+
+### Bước 2: Khởi động giao diện GUI
+* **Cách 1 (Dễ nhất):** Nhấp đúp chuột vào file **`Chay_GUI.bat`** (hoặc `Chay_GUI.ps1`).
+* **Cách 2 (Terminal):**
+  ```bash
+  python gui.py
+  ```
+
+---
+
+## 🏎️ Các Solver thuật toán tích hợp sẵn
+
+Hệ thống hỗ trợ đầy đủ các thuật toán từ cơ bản đến nâng cao:
+1. **Auto-Race ALL (Khuyên dùng)**: Thả cùng lúc 5 solver (`ACO_LS`, `ALNS`, `LocalSearch`, `Greedy`, `Procon26`) chạy đua song song. Solver nào đạt điểm cao nhất và hợp lệ sẽ được tự động chọn để nộp bài lên server.
+2. **Auto-Race**: Chạy đua song song giữa `ACO_LS` và `ALNS`.
+3. **ACO (Ant Colony Optimization + Local Search)**: Tốc độ chớp nhoáng (chỉ ~0.1 - 0.2s/ngày), chất lượng giải pháp cực cao.
+4. **ALNS (Adaptive Large Neighborhood Search)**: Tối ưu hoá phá hủy và tái thiết lập lộ trình theo thời gian sâu.
+5. **LocalSearch (2-Opt / Relocate)**: Tối ưu hóa cục bộ siêu tốc, ăn mì tối đa.
+6. **Greedy (Tham lam)**: Tìm kiếm đường đi ngắn nhất đến quán mì gần nhất.
+7. **MLNS**: Multi-Day LNS với DP lookahead qua nhiều ngày.
+8. **Procon26-Bot**: Solver runner độc lập theo tiêu chuẩn Procon.
+
+---
+
+## 🛠️ Các tính năng chính trên GUI
+- **Thi đấu trực tiếp (Live / Practice)**: Kết nối tới server HAUI (`procon26.haui.ac.vn`), server ngrok hoặc server nội bộ chỉ bằng URL và Token.
+- **Tự động phân vai xe**: Tự động tính toán số lượng xe tiếp xăng (⛽) và xe tuần tra (🏎️) tối ưu nhất theo bản đồ.
+- **Auto-Play cả trận**: Tự động giải và nộp bài liên tục từ Ngày 1 đến Ngày kết thúc mà không cần bấm tay.
+- **Đấu trường đối kháng (Arena)**: Cho 2 bot hoặc nhiều bot đấu trực tiếp với nhau trên cùng 1 trận đấu để kiểm chứng sức mạnh thuật toán.
+
+---
+
+# HEXUDON benchmark and deployment client (C++ Core & Benchmark)
 
 This repository contains a deterministic local HEXUDON environment and a
 guarded client for the live server. The C++20 core owns simulation, scoring,
