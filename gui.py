@@ -585,9 +585,12 @@ def solve_auto_race(map_config, day_info, roles, time_limit_ms=3000, log_fn=None
                     return pol, None, {"valid": False, "servings": -1}, time.time() - t0
                 plan = res["plan"]
             else:
+                search_cfg = {"time_limit_ms": time_limit_ms}
+                if pol == "mlns":
+                    search_cfg["mlnsLookaheadDays"] = 2
                 p = subprocess.run(
                     [str(HEX_BINARY), "plan", pol],
-                    input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": {"time_limit_ms": time_limit_ms}}),
+                    input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": search_cfg}),
                     text=True,
                     capture_output=True,
                     timeout=max(15, int(time_limit_ms / 1000) + 8),
@@ -676,11 +679,14 @@ def solve_plan(policy, map_config, day_info, roles, day_num=1, raw_status=None, 
         return solve_auto_race(map_config, day_info, roles, time_limit_ms=time_limit_ms, log_fn=log_fn, include_all=True, day_num=day_num, raw_status=raw_status)
 
     # Standard hex policy
-    sub_timeout = max(30, int(time_limit_ms / 1000) + 20)
+    sub_timeout = max(35, int(time_limit_ms / 1000) + 25)
+    search_cfg = {"time_limit_ms": time_limit_ms}
+    if policy == "mlns":
+        search_cfg["mlnsLookaheadDays"] = 2
     try:
         p = subprocess.run(
             [str(HEX_BINARY), "plan", policy],
-            input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": {"time_limit_ms": time_limit_ms}}),
+            input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": search_cfg}),
             text=True,
             capture_output=True,
             timeout=sub_timeout,
@@ -1368,25 +1374,44 @@ class HexControlCenter(tk.Tk):
 
             def solve_and_submit_day(target_day):
                 day_idx = target_day - 1
-                steps = map_config["daySteps"][day_idx]
-                self.lbl_status_day.config(text=f"Trạng thái: Đang giải Ngày {target_day}/{total_days} ({steps} bước)")
-                self.log(f"\n--- NGÀY {target_day}/{total_days} (Số bước: {steps}) ---", "INFO")
+                cfg_day_steps = map_config.get("daySteps", [])
+                steps = cfg_day_steps[day_idx] if day_idx < len(cfg_day_steps) else 20
+                self.lbl_status_day.config(text=f"Trạng thái: Đang chuẩn bị Ngày {target_day}/{total_days}...")
+                self.log(f"\n--- NGÀY {target_day}/{total_days} (Dự kiến số bước: {steps}) ---", "INFO")
 
-                # Đợi server đồng bộ ngày (linh hoạt 0-indexed và 1-indexed)
+                # Đồng bộ hóa chính xác nhịp ngày với Server (chờ đến khi server thực sự chuyển sang target_day)
                 day_st = None
-                for _ in range(25):
-                    if self.stop_requested:
-                        break
+                poll_count = 0
+                max_polls = 120  # Chờ tối đa 120s cho mỗi ngày (server thường đếm ngược 45s - 60s)
+
+                while not self.stop_requested and poll_count < max_polls:
                     try:
                         st = self.api.get_game_status(match_id, token)
-                        cur = st.get("currentDay")
-                        cur_alt = st.get("current_day")
-                        if cur == target_day or cur == (target_day - 1) or cur_alt == target_day or cur_alt == (target_day - 1):
+                        cur = st.get("currentDay", st.get("current_day"))
+                        m_status = st.get("status", "")
+                        if m_status == "finished":
+                            self.log("Server thông báo trận đấu đã hoàn thành!", "SUCCESS")
                             day_st = st
                             break
-                    except Exception:
-                        pass
-                    time.sleep(0.5)
+
+                        if cur is not None and cur >= target_day:
+                            day_st = st
+                            if cur > target_day:
+                                self.log(f"Server đã nhảy trước đến Ngày {cur} (Target ban đầu: Ngày {target_day})!", "WARN")
+                            break
+                        else:
+                            if poll_count % 5 == 0:
+                                self.lbl_status_day.config(text=f"Trạng thái: Đang đợi server mở Ngày {target_day}/{total_days} ({poll_count}s)...")
+                                self.log(f"⏳ Đang đợi server xử lý ngày cũ và mở Ngày {target_day} (Server hiện tại: Ngày {cur}, đã đợi {poll_count}s)...", "INFO")
+                    except Exception as e_poll:
+                        if poll_count % 10 == 0:
+                            self.log(f"Đang kết nối lại server: {e_poll}", "WARN")
+
+                    time.sleep(1.0)
+                    poll_count += 1
+
+                if self.stop_requested:
+                    return
 
                 if not day_st:
                     try:
@@ -1394,6 +1419,17 @@ class HexControlCenter(tk.Tk):
                     except Exception as e_st:
                         self.log(f"Lỗi đọc status từ server: {e_st}", "ERROR")
                         day_st = {}
+
+                # Lấy số bước chính xác theo ngày hiện tại từ server hoặc map config
+                cur_server_day = day_st.get("currentDay", target_day)
+                cur_day_idx = cur_server_day - 1
+                server_steps = day_st.get("stepsCount")
+                if server_steps and isinstance(server_steps, int) and server_steps > 0:
+                    steps = server_steps
+                elif cur_day_idx < len(cfg_day_steps):
+                    steps = cfg_day_steps[cur_day_idx]
+
+                self.lbl_status_day.config(text=f"Trạng thái: Đang giải Ngày {cur_server_day}/{total_days} ({steps} bước)")
 
                 # Chuẩn hóa an toàn dữ liệu bản đồ, xe và giao thông
                 normalize_map_config(map_config)
@@ -1407,19 +1443,22 @@ class HexControlCenter(tk.Tk):
                 )
 
                 day_info = {
-                    "day": day_idx,
+                    "day": cur_day_idx,
                     "steps": steps,
                     "agents": built_agents,
                     "traffics": norm_traffics
                 }
 
                 t0 = time.time()
-                plan = solve_plan(policy, map_config, day_info, roles, day_num=target_day, raw_status=day_st, time_limit_ms=time_limit_ms, log_fn=self.log)
+                plan = solve_plan(policy, map_config, day_info, roles, day_num=cur_server_day, raw_status=day_st, time_limit_ms=time_limit_ms, log_fn=self.log)
                 elapsed = time.time() - t0
                 self.log(f"Đã giải xong trong {elapsed:.2f}s! Đang nộp bài...", "SUCCESS")
 
                 ans_res = self.api.submit_actions(match_id, token, plan)
-                self.log(f"Server phản hồi: {ans_res}", "INFO")
+                if isinstance(ans_res, dict) and ans_res.get("valid") is False:
+                    self.log(f"❌ Server phản hồi lỗi: {ans_res.get('error', ans_res)}", "ERROR")
+                else:
+                    self.log(f"✅ Server ghi nhận nộp bài Ngày {cur_server_day} thành công: {ans_res}", "SUCCESS")
 
             # BƯỚC 2: Tiến hành giải theo chế độ đã chọn
             if mode == "step":
@@ -1436,11 +1475,10 @@ class HexControlCenter(tk.Tk):
                     solve_and_submit_day(day_num)
 
                     # Chuyển ngày nếu là match luyện tập của admin
-                    if day_num < total_days:
-                        time.sleep(0.5)
+                    if day_num < total_days and not self.stop_requested:
                         try:
                             self.api.match_action(match_id, "next_day")
-                            self.log(f"Đã kích hoạt next_day sang Ngày {day_num + 1}", "INFO")
+                            self.log(f"Đã gửi tín hiệu next_day sang Ngày {day_num + 1}", "INFO")
                         except Exception:
                             pass
 
