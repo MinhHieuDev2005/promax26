@@ -676,28 +676,53 @@ def solve_plan(policy, map_config, day_info, roles, day_num=1, raw_status=None, 
         return solve_auto_race(map_config, day_info, roles, time_limit_ms=time_limit_ms, log_fn=log_fn, include_all=True, day_num=day_num, raw_status=raw_status)
 
     # Standard hex policy
-    p = subprocess.run([str(HEX_BINARY), "plan", policy], input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": {"time_limit_ms": time_limit_ms}}), text=True, capture_output=True, timeout=max(20, int(time_limit_ms / 1000) + 10), cwd=ROOT)
-    if p.returncode != 0 or not p.stdout.strip():
+    sub_timeout = max(30, int(time_limit_ms / 1000) + 20)
+    try:
+        p = subprocess.run(
+            [str(HEX_BINARY), "plan", policy],
+            input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": {"time_limit_ms": time_limit_ms}}),
+            text=True,
+            capture_output=True,
+            timeout=sub_timeout,
+            cwd=ROOT
+        )
+        if p.returncode == 0 and p.stdout.strip():
+            plan = json.loads(p.stdout)
+            sc = check_plan_score(map_config, day_info, plan)
+            if sc.get("valid") and log_fn:
+                log_fn(f"  📊 Kế hoạch: {sc.get('servings', 0)} bát mì | {sc.get('distinct_types', 0)}/4 loại mì", "INFO")
+            return plan
+        else:
+            if log_fn:
+                log_fn(f"Solver {policy} kết thúc với mã lỗi ({p.returncode}), kích hoạt Greedy cứu nguy khẩn cấp...", "WARN")
+    except subprocess.TimeoutExpired:
         if log_fn:
-            log_fn(f"Solver {policy} lỗi ({p.returncode}), kích hoạt Greedy cứu nguy khẩn cấp...", "WARN")
-        try:
-            p_fb = subprocess.run([str(HEX_BINARY), "plan", "greedy"], input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": {"time_limit_ms": 1000}}), text=True, capture_output=True, timeout=10, cwd=ROOT)
-            if p_fb.returncode == 0 and p_fb.stdout.strip():
-                return json.loads(p_fb.stdout)
-        except Exception:
-            pass
-        # Kế hoạch an toàn tuyệt đối bằng Python nếu binary gặp sự cố
-        steps = day_info.get("steps", 20)
-        num_agents = len(roles) if roles else (len(day_info.get("agents", [])) or 4)
+            log_fn(f"⚠️ Solver {policy} chạy quá {sub_timeout}s (Timeout), kích hoạt Greedy cứu nguy khẩn cấp...", "WARN")
+    except Exception as e_run:
         if log_fn:
-            log_fn("Tạo kế hoạch an toàn (Wait) để bảo toàn trận đấu...", "WARN")
-        return [[-int(steps)] for _ in range(num_agents)]
-    
-    plan = json.loads(p.stdout)
-    sc = check_plan_score(map_config, day_info, plan)
-    if sc.get("valid") and log_fn:
-        log_fn(f"  📊 Kế hoạch: {sc.get('servings', 0)} bát mì | {sc.get('distinct_types', 0)}/4 loại mì", "INFO")
-    return plan
+            log_fn(f"⚠️ Solver {policy} gặp lỗi ({e_run}), kích hoạt Greedy cứu nguy khẩn cấp...", "WARN")
+
+    # Greedy Fallback cứu sinh
+    try:
+        p_fb = subprocess.run(
+            [str(HEX_BINARY), "plan", "greedy"],
+            input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": {"time_limit_ms": 1000}}),
+            text=True,
+            capture_output=True,
+            timeout=10,
+            cwd=ROOT
+        )
+        if p_fb.returncode == 0 and p_fb.stdout.strip():
+            return json.loads(p_fb.stdout)
+    except Exception:
+        pass
+
+    # Kế hoạch an toàn tuyệt đối bằng Python nếu binary gặp sự cố
+    steps = day_info.get("steps", 20)
+    num_agents = len(roles) if roles else (len(day_info.get("agents", [])) or 4)
+    if log_fn:
+        log_fn("Tạo kế hoạch an toàn (Wait) để bảo toàn trận đấu...", "WARN")
+    return [[-int(steps)] for _ in range(num_agents)]
 
 
 class HexControlCenter(tk.Tk):
