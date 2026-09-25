@@ -255,6 +255,8 @@ def normalize_map_config(map_config):
     """Đảm bảo map_config chuẩn 100%, tự chuyển cells 1D sang 2D, đảm bảo spots và agents không lỗi."""
     if not map_config or not isinstance(map_config, dict):
         return map_config
+
+    # 1. Map cells 2D
     m = map_config.get("map", {})
     if isinstance(m, dict):
         W = m.get("width", 0)
@@ -262,6 +264,53 @@ def normalize_map_config(map_config):
         cells = m.get("cells", [])
         if cells and not isinstance(cells[0], (list, tuple)) and W > 0 and H > 0:
             m["cells"] = [cells[row * W : (row + 1) * W] for row in range(H)]
+
+    # 2. startsAt, daySeconds, daySteps
+    if "startsAt" not in map_config or map_config["startsAt"] is None:
+        map_config["startsAt"] = int(time.time())
+    if "daySteps" not in map_config or not map_config["daySteps"]:
+        map_config["daySteps"] = [100]
+    num_days = len(map_config["daySteps"])
+    if "daySeconds" not in map_config or not map_config["daySeconds"]:
+        map_config["daySeconds"] = [45.0] * num_days
+    elif len(map_config["daySeconds"]) < num_days:
+        map_config["daySeconds"] = list(map_config["daySeconds"]) + [45.0] * (num_days - len(map_config["daySeconds"]))
+
+    # 3. agents list of ints
+    raw_agents = map_config.get("agents", [])
+    clean_agents = []
+    for a in raw_agents:
+        if isinstance(a, dict):
+            clean_agents.append(int(a.get("pos", 0)))
+        elif isinstance(a, (int, float)):
+            clean_agents.append(int(a))
+    if not clean_agents:
+        clean_agents = [0, 1, 2, 3]
+    map_config["agents"] = clean_agents
+
+    # 4. spots
+    raw_spots = map_config.get("spots", [])
+    clean_spots = []
+    for idx, s in enumerate(raw_spots):
+        if isinstance(s, dict):
+            brand = int(s.get("brand", 0))
+            pos = int(s.get("pos", 0))
+            stocks = int(s.get("stocks", s.get("stock", 1)))
+            clean_spots.append({"brand": brand, "pos": pos, "stocks": stocks})
+        elif isinstance(s, (int, float)):
+            clean_spots.append({"brand": 0, "pos": int(s), "stocks": 1})
+    map_config["spots"] = clean_spots
+
+    # 5. fuelLimits, players, busyThreshold, jammedThreshold
+    if "fuelLimits" not in map_config:
+        map_config["fuelLimits"] = int(map_config.get("fuel_limit", map_config.get("fuelLimit", 200)))
+    if "players" not in map_config:
+        map_config["players"] = 2
+    if "busyThreshold" not in map_config:
+        map_config["busyThreshold"] = 4
+    if "jammedThreshold" not in map_config:
+        map_config["jammedThreshold"] = 10
+
     return map_config
 
 
@@ -390,25 +439,110 @@ def build_procon26_payload(map_config, day_info, day_num, raw_status=None):
 
 
 def solve_roles(policy, map_config):
+    """Tính toán phân bổ vai trò xe tối ưu:
+    1. Ưu tiên gọi C++ solver / Runner nếu có cấu hình tương thích.
+    2. Fallback sang Smart Spatial Optimizer: Phân tích vị trí xuất phát từng xe so với các cụm quán mì,
+       chọn xe ở xa quán mì nhất làm xe tiếp xăng ⛽ để các xe gần mì tập trung gom điểm ngay từ vòng đầu.
+    """
     normalize_map_config(map_config)
-    num_agents = len(map_config.get("agents", [])) if (map_config and "agents" in map_config) else 6
+    agents = map_config.get("agents", [])
+    num_agents = len(agents) if agents else 6
+    if num_agents <= 0:
+        return [1]
+
+    # 1. Procon26 Runner
     if policy == "procon26":
-        payload = {"op": "roles", "config": map_config}
-        p = subprocess.run([str(PROCON26_RUNNER)], input=json.dumps(payload), text=True, capture_output=True, timeout=20, cwd=ROOT_PROCON26)
-        res = json.loads(p.stdout)
-        roles = res.get("roles", [1] + [0] * (num_agents - 1))
-        return roles[:num_agents] if len(roles) >= num_agents else roles + [0] * (num_agents - len(roles))
-    
-    actual_policy = "aco_ls" if policy in ["auto_race", "auto_race_all"] else policy
-    payload = {"config": map_config}
-    p = subprocess.run([str(HEX_BINARY), "types", actual_policy], input=json.dumps(payload), text=True, capture_output=True, timeout=20, cwd=ROOT)
-    if p.returncode != 0:
-        return [1] + [0] * (num_agents - 1)
-    roles = json.loads(p.stdout)
-    if len(roles) < num_agents:
-        roles = roles + [0] * (num_agents - len(roles))
-    elif len(roles) > num_agents:
-        roles = roles[:num_agents]
+        try:
+            payload = {"op": "roles", "config": map_config}
+            p = subprocess.run([str(PROCON26_RUNNER)], input=json.dumps(payload), text=True, capture_output=True, timeout=15, cwd=ROOT_PROCON26)
+            if p.returncode == 0:
+                res = json.loads(p.stdout)
+                roles = res.get("roles")
+                if roles and isinstance(roles, list) and len(roles) == num_agents and 1 in roles:
+                    return roles
+        except Exception:
+            pass
+
+    # 2. Hexudon C++ Solver cho ALNS / MLNS / LNS_DP / SIMPLE_LNS
+    if policy in ["alns", "mlns", "lns_dp", "simple_lns", "stop_bp", "bp"]:
+        try:
+            payload = {"config": map_config}
+            p = subprocess.run([str(HEX_BINARY), "types", policy], input=json.dumps(payload), text=True, capture_output=True, timeout=15, cwd=ROOT)
+            if p.returncode == 0:
+                roles = json.loads(p.stdout)
+                if roles and isinstance(roles, list) and len(roles) == num_agents and 1 in roles:
+                    return roles
+        except Exception:
+            pass
+
+    # 3. Smart Spatial Optimizer (Heuristic không gian và bản đồ tối ưu)
+    m = map_config.get("map", {})
+    W = m.get("width", 20)
+    H = m.get("height", 20)
+    fuel_limit = map_config.get("fuelLimits", 200)
+    spots = map_config.get("spots", [])
+
+    # Xác định số lượng xe xăng lý tưởng
+    if num_agents <= 3:
+        target_refuels = 1
+    elif num_agents >= 8:
+        target_refuels = 3 if num_agents >= 12 else 2
+    else:  # 4..7 xe
+        # Map lớn (>= 18x18) hoặc xăng ngặt (<= 120) thì nên có 2 xe tiếp xăng để phủ 2 khu vực
+        if (W >= 18 or H >= 18 or W * H >= 300) or fuel_limit <= 120:
+            target_refuels = 2
+        else:
+            target_refuels = 1
+
+    # Tọa độ các quán mì
+    spot_coords = []
+    for s in spots:
+        p = s.get("pos", 0) if isinstance(s, dict) else int(s)
+        spot_coords.append((p % W, p // W))
+
+    # Tính khoảng cách từ mỗi xe tới quán mì gần nhất
+    candidates = []
+    for i, a in enumerate(agents):
+        pos = a.get("pos", 0) if isinstance(a, dict) else int(a)
+        ax, ay = pos % W, pos // W
+        if spot_coords:
+            min_dist = min(abs(ax - sx) + abs(ay - sy) for sx, sy in spot_coords)
+        else:
+            min_dist = 0
+        candidates.append((min_dist, i, ax, ay))
+
+    # Sắp xếp xe theo khoảng cách tới mì giảm dần (xe ở xa mì nhất được ưu tiên làm xe xăng)
+    candidates.sort(key=lambda c: c[0], reverse=True)
+
+    chosen_refuel_indices = set()
+    if target_refuels >= 1 and candidates:
+        # Xe xa quán mì nhất chắc chắn làm xe tiếp xăng
+        chosen_refuel_indices.add(candidates[0][1])
+        c1_x, c1_y = candidates[0][2], candidates[0][3]
+
+        # Nếu cần 2 xe xăng: chọn trong nhóm xe xa mì chiếc nào phân tán xa xe xăng thứ nhất
+        if target_refuels >= 2 and len(candidates) > 1:
+            pool_end = max(2, (len(candidates) + 1) // 2)
+            pool = candidates[1:pool_end]
+            best_score = -1
+            best_idx = pool[0][1]
+            for min_dist, idx, ax, ay in pool:
+                dist_to_c1 = abs(ax - c1_x) + abs(ay - c1_y)
+                score = min_dist * 2.0 + dist_to_c1
+                if score > best_score:
+                    best_score = score
+                    best_idx = idx
+            chosen_refuel_indices.add(best_idx)
+
+        # Nếu cần >= 3 xe xăng: lấy thêm các xe tiếp theo trong danh sách xa mì
+        for _, idx, _, _ in candidates[2:]:
+            if len(chosen_refuel_indices) >= target_refuels:
+                break
+            chosen_refuel_indices.add(idx)
+
+    roles = [1 if i in chosen_refuel_indices else 0 for i in range(num_agents)]
+    if 1 not in roles and num_agents > 0:
+        roles[0] = 1
     return roles
 
 
@@ -459,9 +593,12 @@ def solve_auto_race(map_config, day_info, roles, time_limit_ms=3000, log_fn=None
                     return pol, None, {"valid": False, "servings": -1}, time.time() - t0
                 plan = res["plan"]
             else:
+                search_cfg = {"time_limit_ms": time_limit_ms}
+                if pol == "mlns":
+                    search_cfg["mlnsLookaheadDays"] = 2
                 p = subprocess.run(
                     [str(HEX_BINARY), "plan", pol],
-                    input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": {"time_limit_ms": time_limit_ms}}),
+                    input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": search_cfg}),
                     text=True,
                     capture_output=True,
                     timeout=max(15, int(time_limit_ms / 1000) + 8),
@@ -550,28 +687,56 @@ def solve_plan(policy, map_config, day_info, roles, day_num=1, raw_status=None, 
         return solve_auto_race(map_config, day_info, roles, time_limit_ms=time_limit_ms, log_fn=log_fn, include_all=True, day_num=day_num, raw_status=raw_status)
 
     # Standard hex policy
-    p = subprocess.run([str(HEX_BINARY), "plan", policy], input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": {"time_limit_ms": time_limit_ms}}), text=True, capture_output=True, timeout=max(20, int(time_limit_ms / 1000) + 10), cwd=ROOT)
-    if p.returncode != 0 or not p.stdout.strip():
+    sub_timeout = max(35, int(time_limit_ms / 1000) + 25)
+    search_cfg = {"time_limit_ms": time_limit_ms}
+    if policy == "mlns":
+        search_cfg["mlnsLookaheadDays"] = 2
+    try:
+        p = subprocess.run(
+            [str(HEX_BINARY), "plan", policy],
+            input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": search_cfg}),
+            text=True,
+            capture_output=True,
+            timeout=sub_timeout,
+            cwd=ROOT
+        )
+        if p.returncode == 0 and p.stdout.strip():
+            plan = json.loads(p.stdout)
+            sc = check_plan_score(map_config, day_info, plan)
+            if sc.get("valid") and log_fn:
+                log_fn(f"  📊 Kế hoạch: {sc.get('servings', 0)} bát mì | {sc.get('distinct_types', 0)}/4 loại mì", "INFO")
+            return plan
+        else:
+            if log_fn:
+                log_fn(f"Solver {policy} kết thúc với mã lỗi ({p.returncode}), kích hoạt Greedy cứu nguy khẩn cấp...", "WARN")
+    except subprocess.TimeoutExpired:
         if log_fn:
-            log_fn(f"Solver {policy} lỗi ({p.returncode}), kích hoạt Greedy cứu nguy khẩn cấp...", "WARN")
-        try:
-            p_fb = subprocess.run([str(HEX_BINARY), "plan", "greedy"], input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": {"time_limit_ms": 1000}}), text=True, capture_output=True, timeout=10, cwd=ROOT)
-            if p_fb.returncode == 0 and p_fb.stdout.strip():
-                return json.loads(p_fb.stdout)
-        except Exception:
-            pass
-        # Kế hoạch an toàn tuyệt đối bằng Python nếu binary gặp sự cố
-        steps = day_info.get("steps", 20)
-        num_agents = len(roles) if roles else (len(day_info.get("agents", [])) or 4)
+            log_fn(f"⚠️ Solver {policy} chạy quá {sub_timeout}s (Timeout), kích hoạt Greedy cứu nguy khẩn cấp...", "WARN")
+    except Exception as e_run:
         if log_fn:
-            log_fn("Tạo kế hoạch an toàn (Wait) để bảo toàn trận đấu...", "WARN")
-        return [[-int(steps)] for _ in range(num_agents)]
-    
-    plan = json.loads(p.stdout)
-    sc = check_plan_score(map_config, day_info, plan)
-    if sc.get("valid") and log_fn:
-        log_fn(f"  📊 Kế hoạch: {sc.get('servings', 0)} bát mì | {sc.get('distinct_types', 0)}/4 loại mì", "INFO")
-    return plan
+            log_fn(f"⚠️ Solver {policy} gặp lỗi ({e_run}), kích hoạt Greedy cứu nguy khẩn cấp...", "WARN")
+
+    # Greedy Fallback cứu sinh
+    try:
+        p_fb = subprocess.run(
+            [str(HEX_BINARY), "plan", "greedy"],
+            input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": {"time_limit_ms": 1000}}),
+            text=True,
+            capture_output=True,
+            timeout=10,
+            cwd=ROOT
+        )
+        if p_fb.returncode == 0 and p_fb.stdout.strip():
+            return json.loads(p_fb.stdout)
+    except Exception:
+        pass
+
+    # Kế hoạch an toàn tuyệt đối bằng Python nếu binary gặp sự cố
+    steps = day_info.get("steps", 20)
+    num_agents = len(roles) if roles else (len(day_info.get("agents", [])) or 4)
+    if log_fn:
+        log_fn("Tạo kế hoạch an toàn (Wait) để bảo toàn trận đấu...", "WARN")
+    return [[-int(steps)] for _ in range(num_agents)]
 
 
 class HexControlCenter(tk.Tk):
@@ -587,6 +752,8 @@ class HexControlCenter(tk.Tk):
         self.current_match_url = None
         self.stop_requested = False
         self.log_queue = queue.Queue()
+        self.cached_map_config = None
+        self.current_roles = [1, 0, 0, 0, 0, 0]
 
         self.setup_styles()
         self.build_ui()
@@ -731,10 +898,10 @@ class HexControlCenter(tk.Tk):
         self.cbo_role_preset = ttk.Combobox(
             row_roles,
             values=[
-                "1 Xe Tiếp Xăng (Xe 1 ⛽) + Còn lại Tuần Tra (🏎️) - [Khuyên Dùng Chuẩn]",
-                "2 Xe Tiếp Xăng (Xe 1, 2 ⛽) + Còn lại Tuần Tra (🏎️)",
-                "Tự động tính toán bằng Solver (Thuật toán tự chọn)",
-                "Tùy chỉnh thủ công từng xe bên dưới"
+                "1 Xe Tiếp Xăng (Xe 1 ⛽) + Còn lại Tuần Tra (🏎️) [Map nhỏ/vừa]",
+                "2 Xe Tiếp Xăng (Xe 1, 2 ⛽) + Còn lại Tuần Tra (🏎️) [Khuyên dùng map lớn]",
+                "🤖 Tự động tối ưu bằng Solver & Bản đồ",
+                "✏️ Tùy chỉnh thủ công từng xe bên dưới"
             ],
             width=50,
             state="readonly"
@@ -793,6 +960,7 @@ class HexControlCenter(tk.Tk):
                     break
 
     def update_agent_role_ui(self, num_agents):
+<<<<<<< HEAD
         """Cập nhật giao diện chọn vai trò xe co giãn theo đúng số xe thực tế của map."""
         # Loading/refreshing the match used to rebuild these widgets and silently
         # reset a manual selection immediately before submit_roles_now() read it.
@@ -802,22 +970,32 @@ class HexControlCenter(tk.Tk):
         for cbo in self.agent_role_combos:
             previous_roles.append(1 if "(1)" in cbo.get() else 0)
         preset_index = self.cbo_role_preset.current()
+=======
+        """Cập nhật giao diện chọn vai trò xe co giãn theo đúng số xe thực tế của map, bảo toàn cấu hình người dùng."""
+        if hasattr(self, "agent_role_combos") and len(self.agent_role_combos) == num_agents and hasattr(self, "current_roles") and len(self.current_roles) == num_agents:
+            return
+
+        # Giữ lại cấu hình vai trò hiện tại nếu có
+        old_roles = getattr(self, "current_roles", [1] + [0] * max(0, num_agents - 1))
+        if len(old_roles) < num_agents:
+            roles = list(old_roles) + [0] * (num_agents - len(old_roles))
+        else:
+            roles = list(old_roles[:num_agents])
+        if 1 not in roles and num_agents > 0:
+            roles[0] = 1
+        self.current_roles = roles
+>>>>>>> 25f8223b2cb62d31b2cc74b5b6e9546451a20adc
 
         for w in self.frame_agents.winfo_children():
             w.destroy()
         self.agent_role_combos.clear()
 
         # Cập nhật danh sách preset theo số xe thực tế
-        p1 = f"1 Xe Tiếp Xăng (Xe 1 ⛽) + {max(0, num_agents - 1)} Xe Tuần Tra (🏎️) - [Khuyên Dùng]"
-        p2 = f"2 Xe Tiếp Xăng (Xe 1, 2 ⛽) + {max(0, num_agents - 2)} Xe Tuần Tra (🏎️)" if num_agents >= 3 else "2 Xe Tiếp Xăng"
-        self.cbo_role_preset["values"] = [
-            p1,
-            p2,
-            f"Tự động tính toán bằng Solver ({num_agents} xe)",
-            "Tùy chỉnh thủ công từng xe bên dưới"
-        ]
-        if self.cbo_role_preset.current() < 0:
-            self.cbo_role_preset.current(0)
+        p1 = f"1 Xe Tiếp Xăng (Xe 1 ⛽) + {max(0, num_agents - 1)} Xe Tuần Tra (🏎️) [Map nhỏ/vừa]"
+        p2 = f"2 Xe Tiếp Xăng (Xe 1, 2 ⛽) + {max(0, num_agents - 2)} Xe Tuần Tra (🏎️) [Khuyên dùng map lớn]" if num_agents >= 3 else "2 Xe Tiếp Xăng (Xe 1, 2 ⛽)"
+        p_auto = f"🤖 Tự động tối ưu bằng Solver ({num_agents} xe)"
+        p_custom = "✏️ Tùy chỉnh thủ công từng xe bên dưới"
+        self.cbo_role_preset["values"] = [p1, p2, p_auto, p_custom]
 
         for i in range(num_agents):
             r = i // 4
@@ -825,6 +1003,7 @@ class HexControlCenter(tk.Tk):
             lbl = ttk.Label(self.frame_agents, text=f"Xe {i+1}:", font=("Segoe UI", 9, "bold"))
             lbl.grid(row=r, column=c, sticky=tk.W, padx=(8 if (i % 4) > 0 else 0, 2), pady=3)
             cbo = ttk.Combobox(self.frame_agents, values=["🏎️ Tuần tra (0)", "⛽ Tiếp xăng (1)"], width=13, state="readonly")
+<<<<<<< HEAD
             if preset_index == 3 and i < len(previous_roles):
                 cbo.current(previous_roles[i])
             else:
@@ -834,16 +1013,37 @@ class HexControlCenter(tk.Tk):
 
         # Re-apply the selected preset and the correct editable/disabled state.
         self.on_role_preset_changed()
+=======
+            cbo.current(1 if roles[i] == 1 else 0)
+            cbo.bind("<<ComboboxSelected>>", self.on_agent_role_changed)
+            cbo.grid(row=r, column=c + 1, sticky=tk.W, padx=(0, 6), pady=3)
+            self.agent_role_combos.append(cbo)
+
+        # Cập nhật trạng thái hiển thị của preset combobox
+        if roles == [1] + [0] * (num_agents - 1):
+            self.cbo_role_preset.current(0)
+        elif num_agents >= 2 and roles == [1, 1] + [0] * (num_agents - 2):
+            self.cbo_role_preset.current(1)
+        else:
+            self.cbo_role_preset.set(f"✏️ Tùy chỉnh: {roles.count(1)} xe xăng ⛽, {roles.count(0)} xe tuần tra 🏎️")
+>>>>>>> 25f8223b2cb62d31b2cc74b5b6e9546451a20adc
 
     def on_role_preset_changed(self, event=None):
         idx = self.cbo_role_preset.current()
         num_agents = len(self.agent_role_combos)
+        if num_agents <= 0:
+            return
         if idx == 0:  # 1 Refuel (Xe 1) + còn lại Patrol
+            roles = [1] + [0] * (num_agents - 1)
             for i in range(num_agents):
                 self.agent_role_combos[i].current(1 if i == 0 else 0)
+            self.current_roles = roles
+            self.log(f"Đã chọn: 1 xe tiếp xăng ⛽ (Xe 1), {max(0, num_agents - 1)} xe tuần tra 🏎️", "INFO")
         elif idx == 1:  # 2 Refuel (Xe 1, 2) + còn lại Patrol
+            roles = [1 if (i in [0, 1] and num_agents > 1) else 0 for i in range(num_agents)]
             for i in range(num_agents):
                 self.agent_role_combos[i].current(1 if (i in [0, 1] and num_agents > 1) else 0)
+<<<<<<< HEAD
         elif idx == 2:  # Solver auto
             self.log(f"Đã chọn chế độ Tự động: Thuật toán Solver sẽ tự phân tích bản đồ để chọn vai trò tối ưu cho {num_agents} xe.", "INFO")
 
@@ -863,20 +1063,81 @@ class HexControlCenter(tk.Tk):
             return [1 if i < min(2, num_agents) else 0 for i in range(num_agents)]
         if idx == 2:  # Solver auto
             roles = solve_roles(policy, map_config)
+=======
+            self.current_roles = roles
+            self.log(f"Đã chọn: 2 xe tiếp xăng ⛽ (Xe 1, 2), {max(0, num_agents - 2)} xe tuần tra 🏎️", "INFO")
+        elif idx == 2:  # Solver auto: Tính toán và cập nhật trực quan ngay lập tức lên GUI!
+            solver_name = self.cbo_solver.get()
+            policy = SOLVERS.get(solver_name, "aco_ls")
+            map_cfg = self.cached_map_config
+            if not map_cfg:
+                try:
+                    with open(ROOT / "map_22x22.json", "r", encoding="utf-8") as f:
+                        map_cfg = json.load(f)
+                except Exception:
+                    map_cfg = {}
+            roles = solve_roles(policy, map_cfg)
+>>>>>>> 25f8223b2cb62d31b2cc74b5b6e9546451a20adc
             if len(roles) < num_agents:
                 roles = roles + [0] * (num_agents - len(roles))
             elif len(roles) > num_agents:
                 roles = roles[:num_agents]
+<<<<<<< HEAD
             return roles
         # Manual mode: use exactly what is visible in the per-agent selectors.
+=======
+            if 1 not in roles and num_agents > 0:
+                roles[0] = 1
+            for i in range(num_agents):
+                self.agent_role_combos[i].current(1 if roles[i] == 1 else 0)
+            self.current_roles = roles
+            refuels = roles.count(1)
+            patrols = roles.count(0)
+            self.log(f"🤖 Solver ({solver_name}) đã chọn cấu hình xe: {roles} ({refuels} xe xăng ⛽, {patrols} xe tuần tra 🏎️)", "SUCCESS")
+        elif idx == 3:  # Tùy chỉnh thủ công
+            self.log("✏️ Chế độ tùy chỉnh: Hãy chọn vai trò cho từng xe ở các ô bên dưới.", "INFO")
+
+    def on_agent_role_changed(self, event=None):
+>>>>>>> 25f8223b2cb62d31b2cc74b5b6e9546451a20adc
         roles = []
         for cbo in self.agent_role_combos:
             val = cbo.get()
             roles.append(1 if "Tiếp xăng" in val or "(1)" in val else 0)
+        self.current_roles = roles
+        refuels = roles.count(1)
+        patrols = roles.count(0)
+        self.cbo_role_preset.set(f"✏️ Tùy chỉnh: {refuels} xe xăng ⛽, {patrols} xe tuần tra 🏎️")
+        self.log(f"✏️ Đã chỉnh thủ công: {roles} ({refuels} xe tiếp xăng ⛽, {patrols} xe tuần tra 🏎️)", "INFO")
+
+    def get_selected_roles(self, map_config=None, policy=None):
+        num_agents = 0
+        if map_config and "agents" in map_config:
+            num_agents = len(map_config["agents"])
+        elif hasattr(self, "agent_role_combos"):
+            num_agents = len(self.agent_role_combos)
+        if num_agents <= 0:
+            num_agents = 4
+
+        roles = []
+        if hasattr(self, "agent_role_combos") and self.agent_role_combos:
+            for cbo in self.agent_role_combos:
+                val = cbo.get()
+                roles.append(1 if "Tiếp xăng" in val or "(1)" in val else 0)
+        elif hasattr(self, "current_roles") and self.current_roles:
+            roles = list(self.current_roles)
+
+        if not roles:
+            roles = [1] + [0] * max(0, num_agents - 1)
+
         if len(roles) < num_agents:
             roles = roles + [0] * (num_agents - len(roles))
         elif len(roles) > num_agents:
             roles = roles[:num_agents]
+
+        if 1 not in roles and num_agents > 0:
+            roles[0] = 1
+
+        self.current_roles = roles
         return roles
 
     def load_match_info(self, match_id=None):
@@ -909,6 +1170,7 @@ class HexControlCenter(tk.Tk):
                 pass
 
         if map_config:
+            self.cached_map_config = map_config
             w = map_config.get("map", {}).get("width", "?")
             h = map_config.get("map", {}).get("height", "?")
             num_agents = len(map_config.get("agents", []))
@@ -940,7 +1202,8 @@ class HexControlCenter(tk.Tk):
     def submit_roles_now(self):
         token = self.ent_token.get().strip()
         match_id = self.ent_match_id.get().strip()
-        policy = SOLVERS[self.cbo_solver.get()]
+        solver_name = self.cbo_solver.get()
+        policy = SOLVERS.get(solver_name, "aco_ls")
         if not token:
             messagebox.showwarning("Thiếu Token", "Vui lòng nhập X-API-TOKEN của đội!")
             return
@@ -967,11 +1230,17 @@ class HexControlCenter(tk.Tk):
     def _submit_roles_worker(self, match_id, token, policy, preset_index,
                              manual_roles):
         try:
+<<<<<<< HEAD
             map_config = None
             try:
                 map_config = self.api.get_game_config(match_id, token)
             except Exception:
                 pass
+=======
+            map_config = self.cached_map_config
+            if not map_config:
+                map_config = self.load_match_info(match_id)
+>>>>>>> 25f8223b2cb62d31b2cc74b5b6e9546451a20adc
             if not map_config:
                 if "haui.ac.vn" in self.api.base_url.lower():
                     try:
@@ -1010,12 +1279,23 @@ class HexControlCenter(tk.Tk):
             else:
                 roles = (manual_roles + [0] * num_agents)[:num_agents]
 
+<<<<<<< HEAD
             if len(roles) != num_agents or any(role not in (0, 1) for role in roles):
                 raise RuntimeError(
                     f"Danh sách vai trò không hợp lệ: {roles} (cần {num_agents} xe)"
                 )
             self.api.submit_roles(match_id, token, roles)
             self.after(0, self._finish_submit_roles, roles, num_agents, None)
+=======
+            roles = self.get_selected_roles(map_config, policy)
+            num_agents = len(roles)
+            res = self.api.submit_roles(match_id, token, roles)
+            refuels = roles.count(1)
+            patrols = roles.count(0)
+            self.log(f"✅ ĐÃ NỘP VAI TRÒ XE THÀNH CÔNG: {roles}", "SUCCESS")
+            self.log(f"   📊 Cấu hình: {refuels} xe tiếp xăng ⛽ | {patrols} xe tuần tra 🏎️ (Tổng: {num_agents} xe)", "SUCCESS")
+            messagebox.showinfo("Nộp thành công", f"Đã nộp cấu hình xe lên Server:\n{roles}\n({refuels} xe tiếp xăng ⛽, {patrols} xe tuần tra 🏎️ / Tổng {num_agents} xe)")
+>>>>>>> 25f8223b2cb62d31b2cc74b5b6e9546451a20adc
         except Exception as e:
             self.after(0, self._finish_submit_roles, None, 0, str(e))
 
@@ -1160,13 +1440,16 @@ class HexControlCenter(tk.Tk):
         self.current_match_id = match_id
         self.current_match_url = f"{self.api.base_url}/matches/{match_id}"
 
-        threading.Thread(target=self._run_live_worker, args=(match_id, token, policy, time_limit_ms, mode), daemon=True).start()
+        # Lấy vai trò xe an toàn trên main thread trước khi khởi chạy worker thread
+        selected_roles = list(self.get_selected_roles(self.cached_map_config, policy))
+
+        threading.Thread(target=self._run_live_worker, args=(match_id, token, policy, time_limit_ms, mode, selected_roles), daemon=True).start()
 
     def stop_match(self):
         self.stop_requested = True
         self.log("Đã yêu cầu DỪNG bot thi đấu.", "WARN")
 
-    def _run_live_worker(self, match_id, token, policy, time_limit_ms, mode="auto"):
+    def _run_live_worker(self, match_id, token, policy, time_limit_ms, mode="auto", user_roles=None):
         try:
             self.log("=" * 70, "INFO")
             mode_text = "TỰ ĐỘNG CHẠY CẢ TRẬN (AUTO PLAY)" if mode == "auto" else "GIẢI & NỘP 1 NGÀY (STEP)"
@@ -1209,11 +1492,13 @@ class HexControlCenter(tk.Tk):
 
             # Chọn vai trò xe
             self.log("Đang kiểm tra và phân bổ vai trò xe...", "INFO")
-            roles = self.get_selected_roles(map_config, policy)
+            roles = list(user_roles) if user_roles else self.get_selected_roles(map_config, policy)
             if len(roles) < num_agents:
                 roles = roles + [0] * (num_agents - len(roles))
             elif len(roles) > num_agents:
                 roles = roles[:num_agents]
+            if 1 not in roles and num_agents > 0:
+                roles[0] = 1
             refuels = roles.count(1)
             patrols = roles.count(0)
             self.log(f"Cấu hình vai trò xe: {roles} ({refuels} xe tiếp xăng ⛽, {patrols} xe tuần tra 🏎️ / Tổng {num_agents} xe)", "INFO")
@@ -1225,25 +1510,44 @@ class HexControlCenter(tk.Tk):
 
             def solve_and_submit_day(target_day):
                 day_idx = target_day - 1
-                steps = map_config["daySteps"][day_idx]
-                self.lbl_status_day.config(text=f"Trạng thái: Đang giải Ngày {target_day}/{total_days} ({steps} bước)")
-                self.log(f"\n--- NGÀY {target_day}/{total_days} (Số bước: {steps}) ---", "INFO")
+                cfg_day_steps = map_config.get("daySteps", [])
+                steps = cfg_day_steps[day_idx] if day_idx < len(cfg_day_steps) else 20
+                self.lbl_status_day.config(text=f"Trạng thái: Đang chuẩn bị Ngày {target_day}/{total_days}...")
+                self.log(f"\n--- NGÀY {target_day}/{total_days} (Dự kiến số bước: {steps}) ---", "INFO")
 
-                # Đợi server đồng bộ ngày (linh hoạt 0-indexed và 1-indexed)
+                # Đồng bộ hóa chính xác nhịp ngày với Server (chờ đến khi server thực sự chuyển sang target_day)
                 day_st = None
-                for _ in range(25):
-                    if self.stop_requested:
-                        break
+                poll_count = 0
+                max_polls = 120  # Chờ tối đa 120s cho mỗi ngày (server thường đếm ngược 45s - 60s)
+
+                while not self.stop_requested and poll_count < max_polls:
                     try:
                         st = self.api.get_game_status(match_id, token)
-                        cur = st.get("currentDay")
-                        cur_alt = st.get("current_day")
-                        if cur == target_day or cur == (target_day - 1) or cur_alt == target_day or cur_alt == (target_day - 1):
+                        cur = st.get("currentDay", st.get("current_day"))
+                        m_status = st.get("status", "")
+                        if m_status == "finished":
+                            self.log("Server thông báo trận đấu đã hoàn thành!", "SUCCESS")
                             day_st = st
                             break
-                    except Exception:
-                        pass
-                    time.sleep(0.5)
+
+                        if cur is not None and cur >= target_day:
+                            day_st = st
+                            if cur > target_day:
+                                self.log(f"Server đã nhảy trước đến Ngày {cur} (Target ban đầu: Ngày {target_day})!", "WARN")
+                            break
+                        else:
+                            if poll_count % 5 == 0:
+                                self.lbl_status_day.config(text=f"Trạng thái: Đang đợi server mở Ngày {target_day}/{total_days} ({poll_count}s)...")
+                                self.log(f"⏳ Đang đợi server xử lý ngày cũ và mở Ngày {target_day} (Server hiện tại: Ngày {cur}, đã đợi {poll_count}s)...", "INFO")
+                    except Exception as e_poll:
+                        if poll_count % 10 == 0:
+                            self.log(f"Đang kết nối lại server: {e_poll}", "WARN")
+
+                    time.sleep(1.0)
+                    poll_count += 1
+
+                if self.stop_requested:
+                    return
 
                 if not day_st:
                     try:
@@ -1251,6 +1555,17 @@ class HexControlCenter(tk.Tk):
                     except Exception as e_st:
                         self.log(f"Lỗi đọc status từ server: {e_st}", "ERROR")
                         day_st = {}
+
+                # Lấy số bước chính xác theo ngày hiện tại từ server hoặc map config
+                cur_server_day = day_st.get("currentDay", target_day)
+                cur_day_idx = cur_server_day - 1
+                server_steps = day_st.get("stepsCount")
+                if server_steps and isinstance(server_steps, int) and server_steps > 0:
+                    steps = server_steps
+                elif cur_day_idx < len(cfg_day_steps):
+                    steps = cfg_day_steps[cur_day_idx]
+
+                self.lbl_status_day.config(text=f"Trạng thái: Đang giải Ngày {cur_server_day}/{total_days} ({steps} bước)")
 
                 # Chuẩn hóa an toàn dữ liệu bản đồ, xe và giao thông
                 normalize_map_config(map_config)
@@ -1264,19 +1579,22 @@ class HexControlCenter(tk.Tk):
                 )
 
                 day_info = {
-                    "day": day_idx,
+                    "day": cur_day_idx,
                     "steps": steps,
                     "agents": built_agents,
                     "traffics": norm_traffics
                 }
 
                 t0 = time.time()
-                plan = solve_plan(policy, map_config, day_info, roles, day_num=target_day, raw_status=day_st, time_limit_ms=time_limit_ms, log_fn=self.log)
+                plan = solve_plan(policy, map_config, day_info, roles, day_num=cur_server_day, raw_status=day_st, time_limit_ms=time_limit_ms, log_fn=self.log)
                 elapsed = time.time() - t0
                 self.log(f"Đã giải xong trong {elapsed:.2f}s! Đang nộp bài...", "SUCCESS")
 
                 ans_res = self.api.submit_actions(match_id, token, plan)
-                self.log(f"Server phản hồi: {ans_res}", "INFO")
+                if isinstance(ans_res, dict) and ans_res.get("valid") is False:
+                    self.log(f"❌ Server phản hồi lỗi: {ans_res.get('error', ans_res)}", "ERROR")
+                else:
+                    self.log(f"✅ Server ghi nhận nộp bài Ngày {cur_server_day} thành công: {ans_res}", "SUCCESS")
 
             # BƯỚC 2: Tiến hành giải theo chế độ đã chọn
             if mode == "step":
@@ -1293,11 +1611,10 @@ class HexControlCenter(tk.Tk):
                     solve_and_submit_day(day_num)
 
                     # Chuyển ngày nếu là match luyện tập của admin
-                    if day_num < total_days:
-                        time.sleep(0.5)
+                    if day_num < total_days and not self.stop_requested:
                         try:
                             self.api.match_action(match_id, "next_day")
-                            self.log(f"Đã kích hoạt next_day sang Ngày {day_num + 1}", "INFO")
+                            self.log(f"Đã gửi tín hiệu next_day sang Ngày {day_num + 1}", "INFO")
                         except Exception:
                             pass
 
