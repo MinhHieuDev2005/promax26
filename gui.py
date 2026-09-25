@@ -215,9 +215,17 @@ class HauiAPI:
         url = f"{self.base_url}/api/game/matches/{match_id}/agents"
         payload = json.dumps(roles).encode("utf-8")
         headers = {"Content-Type": "application/json", "x-api-token": token, "User-Agent": "hexudon-gui/1.0", "ngrok-skip-browser-warning": "true"}
-        req = urllib.request.Request(url, data=payload, headers=headers)
-        with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+        req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
+        try:
+            with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
+                body = resp.read().decode("utf-8")
+                return json.loads(body) if body.strip() else {"ok": True}
+        except urllib.error.HTTPError as error:
+            body = error.read().decode("utf-8", errors="replace").strip()
+            detail = body or error.reason or "server did not provide details"
+            raise RuntimeError(
+                f"HTTP {error.code} khi nộp {roles} tới {url}: {detail}"
+            ) from None
 
     def get_game_status(self, match_id, token):
         url = f"{self.base_url}/api/game/matches/{match_id}/status"
@@ -735,8 +743,8 @@ class HexControlCenter(tk.Tk):
         self.cbo_role_preset.current(0)
         self.cbo_role_preset.bind("<<ComboboxSelected>>", self.on_role_preset_changed)
 
-        btn_send_roles = ttk.Button(row_roles, text="📤 Nộp Vai Trò Xe Ngay", command=self.submit_roles_now)
-        btn_send_roles.grid(row=0, column=5, padx=8, pady=4)
+        self.btn_send_roles = ttk.Button(row_roles, text="📤 Nộp Vai Trò Xe Ngay", command=self.submit_roles_now)
+        self.btn_send_roles.grid(row=0, column=5, padx=8, pady=4)
 
         # Selector cho từng xe (động theo số lượng xe của map)
         self.agent_role_combos = []
@@ -786,6 +794,15 @@ class HexControlCenter(tk.Tk):
 
     def update_agent_role_ui(self, num_agents):
         """Cập nhật giao diện chọn vai trò xe co giãn theo đúng số xe thực tế của map."""
+        # Loading/refreshing the match used to rebuild these widgets and silently
+        # reset a manual selection immediately before submit_roles_now() read it.
+        # Preserve the current values across a rebuild when the agent count is
+        # unchanged (and preserve the overlapping prefix when it changes).
+        previous_roles = []
+        for cbo in self.agent_role_combos:
+            previous_roles.append(1 if "(1)" in cbo.get() else 0)
+        preset_index = self.cbo_role_preset.current()
+
         for w in self.frame_agents.winfo_children():
             w.destroy()
         self.agent_role_combos.clear()
@@ -808,12 +825,15 @@ class HexControlCenter(tk.Tk):
             lbl = ttk.Label(self.frame_agents, text=f"Xe {i+1}:", font=("Segoe UI", 9, "bold"))
             lbl.grid(row=r, column=c, sticky=tk.W, padx=(8 if (i % 4) > 0 else 0, 2), pady=3)
             cbo = ttk.Combobox(self.frame_agents, values=["🏎️ Tuần tra (0)", "⛽ Tiếp xăng (1)"], width=13, state="readonly")
-            if i == 0:
-                cbo.current(1)  # Xe 1: Tiếp xăng
+            if preset_index == 3 and i < len(previous_roles):
+                cbo.current(previous_roles[i])
             else:
-                cbo.current(0)  # Xe 2..N: Tuần tra
+                cbo.current(1 if i == 0 else 0)
             cbo.grid(row=r, column=c + 1, sticky=tk.W, padx=(0, 6), pady=3)
             self.agent_role_combos.append(cbo)
+
+        # Re-apply the selected preset and the correct editable/disabled state.
+        self.on_role_preset_changed()
 
     def on_role_preset_changed(self, event=None):
         idx = self.cbo_role_preset.current()
@@ -827,9 +847,20 @@ class HexControlCenter(tk.Tk):
         elif idx == 2:  # Solver auto
             self.log(f"Đã chọn chế độ Tự động: Thuật toán Solver sẽ tự phân tích bản đồ để chọn vai trò tối ưu cho {num_agents} xe.", "INFO")
 
+        # The per-agent controls are meaningful only in manual mode. Showing
+        # preset values while disabling edits also makes it clear which list
+        # will actually be submitted.
+        combo_state = "readonly" if idx == 3 else "disabled"
+        for cbo in self.agent_role_combos:
+            cbo.configure(state=combo_state)
+
     def get_selected_roles(self, map_config, policy):
         idx = self.cbo_role_preset.current()
         num_agents = len(map_config.get("agents", [])) if (map_config and "agents" in map_config) else len(self.agent_role_combos)
+        if idx == 0:  # Exactly one refuel car.
+            return [1 if i == 0 else 0 for i in range(num_agents)]
+        if idx == 1:  # Exactly two refuel cars (or all cars when only one exists).
+            return [1 if i < min(2, num_agents) else 0 for i in range(num_agents)]
         if idx == 2:  # Solver auto
             roles = solve_roles(policy, map_config)
             if len(roles) < num_agents:
@@ -837,6 +868,7 @@ class HexControlCenter(tk.Tk):
             elif len(roles) > num_agents:
                 roles = roles[:num_agents]
             return roles
+        # Manual mode: use exactly what is visible in the per-agent selectors.
         roles = []
         for cbo in self.agent_role_combos:
             val = cbo.get()
@@ -915,8 +947,31 @@ class HexControlCenter(tk.Tk):
         if not match_id:
             messagebox.showwarning("Thiếu Match ID", "Vui lòng nhập Match ID hoặc bấm nút 'Lấy trận mới nhất'!")
             return
+
+        # Snapshot every Tk value before leaving the UI thread. Network calls,
+        # admin fallback, and automatic role solving can each take many seconds;
+        # doing them in this callback made Windows report the GUI as hung.
+        host = self.ent_host.get().strip() if hasattr(self, "ent_host") else DEFAULT_HOST
+        self.api.set_host(host)
+        preset_index = self.cbo_role_preset.current()
+        manual_roles = [1 if "(1)" in cbo.get() else 0
+                        for cbo in self.agent_role_combos]
+        self.btn_send_roles.configure(state=tk.DISABLED)
+        self.log("Đang tải cấu hình và nộp vai trò xe...", "INFO")
+        threading.Thread(
+            target=self._submit_roles_worker,
+            args=(match_id, token, policy, preset_index, manual_roles),
+            daemon=True,
+        ).start()
+
+    def _submit_roles_worker(self, match_id, token, policy, preset_index,
+                             manual_roles):
         try:
-            map_config = self.load_match_info(match_id)
+            map_config = None
+            try:
+                map_config = self.api.get_game_config(match_id, token)
+            except Exception:
+                pass
             if not map_config:
                 if "haui.ac.vn" in self.api.base_url.lower():
                     try:
@@ -925,21 +980,60 @@ class HexControlCenter(tk.Tk):
                         map_config = json.loads(match_data["match"]["map_config_json"])
                     except Exception:
                         pass
+            # Never use a local sample map to construct an official role answer:
+            # a different agent count is a guaranteed HTTP 400. Manual presets
+            # need only the already rendered selector count; automatic mode
+            # genuinely requires the authoritative map.
+            if map_config:
+                num_agents = len(map_config.get("agents", []))
+            else:
+                try:
+                    status = self.api.get_game_status(match_id, token)
+                    status_agents = status.get("agents", [])
+                    num_agents = len(status_agents) or len(manual_roles)
+                except Exception:
+                    num_agents = len(manual_roles)
+            if num_agents <= 0:
+                raise RuntimeError("Không xác định được số xe của trận đấu")
+            if preset_index == 0:
+                roles = [1 if i == 0 else 0 for i in range(num_agents)]
+            elif preset_index == 1:
+                roles = [1 if i < min(2, num_agents) else 0
+                         for i in range(num_agents)]
+            elif preset_index == 2:
                 if not map_config:
-                    with open(ROOT / "map_22x22.json", "r", encoding="utf-8") as f:
-                        map_config = json.load(f)
+                    raise RuntimeError(
+                        "Không tải được map thật từ server nên không thể tự động chọn xe"
+                    )
+                roles = solve_roles(policy, map_config)
+                roles = (roles + [0] * num_agents)[:num_agents]
+            else:
+                roles = (manual_roles + [0] * num_agents)[:num_agents]
 
-            num_agents = len(map_config.get("agents", []))
-            roles = self.get_selected_roles(map_config, policy)
-            res = self.api.submit_roles(match_id, token, roles)
-            refuels = roles.count(1)
-            patrols = roles.count(0)
-            self.log(f"✅ ĐÃ NỘP VAI TRÒ XE THÀNH CÔNG: {roles}", "SUCCESS")
-            self.log(f"   📊 Cấu hình: {refuels} xe tiếp xăng ⛽ | {patrols} xe tuần tra 🏎️ (Tổng: {num_agents} xe)", "SUCCESS")
-            messagebox.showinfo("Nộp thành công", f"Đã nộp cấu hình xe lên Server:\n{roles}\n({refuels} xe tiếp xăng ⛽, {patrols} xe tuần tra 🏎️ / Tổng {num_agents} xe)")
+            if len(roles) != num_agents or any(role not in (0, 1) for role in roles):
+                raise RuntimeError(
+                    f"Danh sách vai trò không hợp lệ: {roles} (cần {num_agents} xe)"
+                )
+            self.api.submit_roles(match_id, token, roles)
+            self.after(0, self._finish_submit_roles, roles, num_agents, None)
         except Exception as e:
-            self.log(f"❌ Lỗi khi nộp vai trò xe: {e}", "ERROR")
-            messagebox.showerror("Lỗi nộp xe", f"Không thể nộp vai trò xe: {e}")
+            self.after(0, self._finish_submit_roles, None, 0, str(e))
+
+    def _finish_submit_roles(self, roles, num_agents, error):
+        self.btn_send_roles.configure(state=tk.NORMAL)
+        if error:
+            self.log(f"❌ Lỗi khi nộp vai trò xe: {error}", "ERROR")
+            messagebox.showerror("Lỗi nộp xe", f"Không thể nộp vai trò xe: {error}")
+            return
+        refuels = roles.count(1)
+        patrols = roles.count(0)
+        self.log(f"✅ ĐÃ NỘP VAI TRÒ XE THÀNH CÔNG: {roles}", "SUCCESS")
+        self.log(f"   📊 Cấu hình: {refuels} xe tiếp xăng ⛽ | {patrols} xe tuần tra 🏎️ (Tổng: {num_agents} xe)", "SUCCESS")
+        messagebox.showinfo(
+            "Nộp thành công",
+            f"Đã nộp cấu hình xe lên Server:\n{roles}\n"
+            f"({refuels} xe tiếp xăng ⛽, {patrols} xe tuần tra 🏎️ / Tổng {num_agents} xe)",
+        )
 
     def fetch_latest_match(self):
         host = self.ent_host.get().strip() if hasattr(self, "ent_host") else DEFAULT_HOST
