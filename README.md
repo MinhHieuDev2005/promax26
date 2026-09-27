@@ -45,6 +45,55 @@ Hệ thống hỗ trợ đầy đủ các thuật toán từ cơ bản đến n�
 
 ---
 
+## Thêm / thay solver bằng EXE
+
+Bấm **+ Thêm solver EXE** cạnh danh sách thuật toán, chọn executable và đặt
+tên, rồi chọn kiểu: **Có = Bot HTTP**, **Không = Runner JSON**.
+**EXE: <tên>** dùng trong Live, Arena 1v1 và Auto-Race ALL.
+**HTTP: <tên>** (như `bot_v11.exe`) dùng proxy cục bộ chuyển API bot sang API
+HAUI, lấy URL/Match ID/Token từ GUI. GUI kiểm tra kết nối trước, hiển thị log
+API và dừng cả bot/proxy; không tự giải/nộp bài trùng. Giữ `windows-roots.pem`
+cạnh EXE nếu Python cần thêm CA để xác minh TLS. Xem `solvers/README.md`.
+Danh sách tự lưu tại `solvers/registered.json`. Muốn thay EXE/kiểu: thêm lại
+cùng tên rồi xác nhận. Muốn xóa: chọn mục, bấm **Xóa solver**; giữ nguyên EXE/DLL.
+EXE phải hỗ trợ đúng giao thức JSON hoặc các cờ HTTP đã mô tả tại `solvers/README.md`.
+
+Để thay riêng runner mặc định, đặt `runner.exe` cùng DLL trong `solvers/`, mở lại GUI và chọn
+**Runner EXE (Procon26 / solver thay thế)**.
+Executable phải hỗ trợ JSON `roles` / `plan`; xem `solvers/README.md`.
+Không cần sửa GUI hay build lại. Source và benchmark hiện có vẫn giữ nguyên.
+
+### Chọn vai trò xe Auto/Manual
+
+- Chọn solver, nhập URL/Match ID/Token và chọn **Tự động tối ưu bằng Solver**.
+  Khi bấm chạy hoặc **Nộp Vai Trò Xe Ngay**, GUI lấy config/status mới từ server,
+  tính trên worker nền và chỉ chạy kế hoạch với vai trò server xác nhận. Không dùng
+  map mẫu hoặc kết quả cũ khi đổi solver/map hay reset cùng Match ID.
+- Auto vẫn giữ nguyên khi thay đổi số xe. Với **HTTP Auto**, bấm chạy cả trận để
+  bot chọn xe; nút nộp xe không gửi cấu hình đang hiển thị thay cho bot.
+- Chọn preset hoặc chỉnh từng xe để chuyển sang Manual. Cho phép tất cả xe tuần tra
+  (`[0,0,...]`); không tự ép thêm xe xăng. Nếu số xe không khớp map thật, tải lại
+  thông tin map và chọn lại. Các ô bị khóa trong lúc tính/preflight/chạy.
+- Solver native dùng `hexudon select`, đọc các ứng viên JSONL và giữ ứng viên hợp lệ
+  cuối nếu hết giờ. Auto-Race dùng ALNS để chọn vai trò, sau đó vẫn đua các planner
+  như trước. Không còn fallback âm thầm sang heuristic khoảng cách Manhattan.
+- Ngân sách chọn xe tối đa 5 giây, rút ngắn theo `agent_selection_time_limit` và
+  `startsAt` tương lai; chừa 0,5 giây cho nộp bài và cấp 90% phần còn lại cho native.
+  Đây không phải hạn mức ms/ngày. JSON runner có timeout tương ứng; HTTP bot tự tính.
+- Vai trò đã tồn tại trên server được ưu tiên. HTTP Manual sẽ dừng nếu cấu hình
+  server khác yêu cầu hoặc không xác nhận được, thay vì chạy sai cấu hình.
+- Với native/JSON runner, log phân biệt **ĐÃ CHỌN**, **ĐÃ GỬI — CHỜ XÁC NHẬN**,
+  và **SERVER ĐÃ XÁC NHẬN**. GUI ghi mã HTTP của API nộp và chờ `/status` tối đa
+  30 giây (yêu cầu mạng đang chạy có timeout riêng 15 giây), không tự nộp lại.
+  Nút Dừng ngừng chờ sau yêu cầu mạng hiện tại, không thu hồi bài đã gửi.
+  Hết thời gian chờ chỉ có nghĩa chưa xác nhận được; không kết luận server từ chối
+  và không chạy kế hoạch khi chưa có vai trò thực tế.
+
+Kiểm tra offline: `python -m unittest tests.test_gui_runner tests.test_http_bot_proxy`.
+Fixture ngắn, dư xăng xác nhận giữ 3 xe tuần tra thu được 3 nhãn mì thay vì 2 khi
+ép 1 xe xăng. Đây là hồi quy cụ thể, không phải bằng chứng tối ưu toàn cục hay
+tỷ lệ thắng trên server; vẫn cần benchmark nhiều trận đầy đủ trước khi tăng ngân sách.
+
 # HEXUDON benchmark and deployment client (C++ Core & Benchmark)
 
 This repository contains a deterministic local HEXUDON environment and a

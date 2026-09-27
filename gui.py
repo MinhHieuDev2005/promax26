@@ -9,25 +9,32 @@ Giao diện đồ họa chuyên nghiệp cho phép:
 """
 
 import json
+import math
 import os
 import queue
 import ssl
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.request
+from urllib.parse import urlsplit
 import webbrowser
 import http.cookiejar
+from http.client import HTTPException
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
+from tkinter import ttk, messagebox, scrolledtext, filedialog, simpledialog
+from http_bot_proxy import BotProxy
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
 ROOT = Path(__file__).resolve().parent
+RUNNER_REGISTRY = ROOT / "solvers" / "registered.json"
+CUSTOM_RUNNERS = {}
 
 # Tự động tìm HEX_BINARY (ưu tiên bin/, sau đó build/)
 if (ROOT / "bin" / "hexudon.exe").exists():
@@ -37,19 +44,14 @@ elif (ROOT / "build" / "hexudon.exe").exists():
 else:
     HEX_BINARY = ROOT / "bin" / "hexudon.exe"
 
-# Tự động tìm PROCON26_RUNNER (ưu tiên bin/, sau đó build/, sau đó fallback D:/Procon26)
-if (ROOT / "bin" / "hexudon_runner.exe").exists():
+if (ROOT / "solvers" / "runner.exe").is_file():
+    PROCON26_RUNNER = ROOT / "solvers" / "runner.exe"
+elif (ROOT / "bin" / "hexudon_runner.exe").exists():
     PROCON26_RUNNER = ROOT / "bin" / "hexudon_runner.exe"
-    ROOT_PROCON26 = ROOT
 elif (ROOT / "build" / "hexudon_runner.exe").exists():
     PROCON26_RUNNER = ROOT / "build" / "hexudon_runner.exe"
-    ROOT_PROCON26 = ROOT
-elif Path("D:/Procon26/out/build/haui-practice-release/hexudon_runner.exe").exists():
-    PROCON26_RUNNER = Path("D:/Procon26/out/build/haui-practice-release/hexudon_runner.exe")
-    ROOT_PROCON26 = Path("D:/Procon26").resolve()
 else:
     PROCON26_RUNNER = ROOT / "bin" / "hexudon_runner.exe"
-    ROOT_PROCON26 = ROOT
 
 DEFAULT_HOST = "procon26.haui.ac.vn"
 DEFAULT_USER = "mhieu"
@@ -66,7 +68,7 @@ SOLVERS = {
     "ACO (Bầy kiến + LS - Tốc độ chớp nhoáng)": "aco_ls",
     "ALNS (Adaptive LNS - Ổn định & Sâu)": "alns",
     "MLNS (Multi-Day LNS + DP Lookahead)": "mlns",
-    "Procon26-Bot (Solver D:\\Procon26)": "procon26",
+    "Runner EXE (Procon26 / solver thay thế)": "procon26",
     "LocalSearch (2-Opt / Relocate)": "local_search",
     "Greedy (Tham lam cơ bản)": "greedy",
 }
@@ -211,21 +213,19 @@ class HauiAPI:
                     return json.loads(resp.read().decode("utf-8")).get("teams", [])
             raise
 
-    def submit_roles(self, match_id, token, roles):
+    def submit_roles(self, match_id, token, roles, log_fn=None):
         url = f"{self.base_url}/api/game/matches/{match_id}/agents"
         payload = json.dumps(roles).encode("utf-8")
         headers = {"Content-Type": "application/json", "x-api-token": token, "User-Agent": "hexudon-gui/1.0", "ngrok-skip-browser-warning": "true"}
-        req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
-        try:
-            with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
-                body = resp.read().decode("utf-8")
-                return json.loads(body) if body.strip() else {"ok": True}
-        except urllib.error.HTTPError as error:
-            body = error.read().decode("utf-8", errors="replace").strip()
-            detail = body or error.reason or "server did not provide details"
-            raise RuntimeError(
-                f"HTTP {error.code} khi nộp {roles} tới {url}: {detail}"
-            ) from None
+        req = urllib.request.Request(url, data=payload, headers=headers)
+        with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
+            payload = resp.read().decode("utf-8")
+            result = json.loads(payload) if payload.strip() else {}
+            if log_fn:
+                log_fn(f"[Xe] API nộp trả HTTP {resp.status}; đang kiểm tra vai trò thực tế.", "INFO")
+            if isinstance(result, dict) and (result.get("ok") is False or result.get("success") is False):
+                raise RuntimeError("API trả kết quả nộp vai trò không thành công.")
+            return result
 
     def get_game_status(self, match_id, token):
         url = f"{self.base_url}/api/game/matches/{match_id}/status"
@@ -438,113 +438,257 @@ def build_procon26_payload(map_config, day_info, day_num, raw_status=None):
     }
 
 
-def solve_roles(policy, map_config):
-    """Tính toán phân bổ vai trò xe tối ưu:
-    1. Ưu tiên gọi C++ solver / Runner nếu có cấu hình tương thích.
-    2. Fallback sang Smart Spatial Optimizer: Phân tích vị trí xuất phát từng xe so với các cụm quán mì,
-       chọn xe ở xa quán mì nhất làm xe tiếp xăng ⛽ để các xe gần mì tập trung gom điểm ngay từ vòng đầu.
-    """
-    normalize_map_config(map_config)
-    agents = map_config.get("agents", [])
-    num_agents = len(agents) if agents else 6
-    if num_agents <= 0:
-        return [1]
+def read_custom_runners():
+    if not RUNNER_REGISTRY.exists():
+        return {}
+    entries = json.loads(RUNNER_REGISTRY.read_text(encoding="utf-8"))
+    if not isinstance(entries, dict) or any(
+        not name.startswith(("EXE: ", "HTTP: ")) or not name.partition(": ")[2].strip()
+        or not isinstance(filename, str) or "\x00" in filename
+        or Path(filename).suffix.lower() != ".exe"
+        for name, filename in entries.items()
+    ):
+        raise ValueError("Danh sách solver phải chứa tên EXE: <tên> hoặc HTTP: <tên> và đường dẫn .exe.")
+    return {name: (ROOT / filename).resolve() for name, filename in entries.items()}
 
-    # 1. Procon26 Runner
-    if policy == "procon26":
-        try:
-            payload = {"op": "roles", "config": map_config}
-            p = subprocess.run([str(PROCON26_RUNNER)], input=json.dumps(payload), text=True, capture_output=True, timeout=15, cwd=ROOT_PROCON26)
-            if p.returncode == 0:
-                res = json.loads(p.stdout)
-                roles = res.get("roles")
-                if roles and isinstance(roles, list) and len(roles) == num_agents and 1 in roles:
-                    return roles
-        except Exception:
-            pass
 
-    # 2. Hexudon C++ Solver cho ALNS / MLNS / LNS_DP / SIMPLE_LNS
-    if policy in ["alns", "mlns", "lns_dp", "simple_lns", "stop_bp", "bp"]:
-        try:
-            payload = {"config": map_config}
-            p = subprocess.run([str(HEX_BINARY), "types", policy], input=json.dumps(payload), text=True, capture_output=True, timeout=15, cwd=ROOT)
-            if p.returncode == 0:
-                roles = json.loads(p.stdout)
-                if roles and isinstance(roles, list) and len(roles) == num_agents and 1 in roles:
-                    return roles
-        except Exception:
-            pass
+def register_runner(name, filename, transport="json"):
+    if transport not in ("json", "http"):
+        raise ValueError("Kiểu EXE phải là json hoặc http.")
+    name = name.strip()
+    if not name or len(name) > 100 or any(ord(character) < 32 for character in name):
+        raise ValueError("Tên solver cần có 1–100 ký tự, không chứa ký tự điều khiển.")
+    executable = Path(filename).resolve()
+    if not executable.is_file() or executable.suffix.lower() != ".exe":
+        raise ValueError("Hãy chọn một file .exe tồn tại.")
+    label = f"{'HTTP' if transport == 'http' else 'EXE'}: {name}"
+    previous_label = f"{'EXE' if transport == 'http' else 'HTTP'}: {name}"
+    entries = read_custom_runners()
+    entries.pop(previous_label, None)
+    entries[label] = executable
+    write_custom_runners(entries)
+    CUSTOM_RUNNERS.pop(previous_label, None)
+    SOLVERS.pop(previous_label, None)
+    CUSTOM_RUNNERS.update(entries)
+    SOLVERS.update({key: key for key in entries})
+    return label
 
-    # 3. Smart Spatial Optimizer (Heuristic không gian và bản đồ tối ưu)
-    m = map_config.get("map", {})
-    W = m.get("width", 20)
-    H = m.get("height", 20)
-    fuel_limit = map_config.get("fuelLimits", 200)
-    spots = map_config.get("spots", [])
+def write_custom_runners(entries):
+    RUNNER_REGISTRY.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=RUNNER_REGISTRY.parent, delete=False) as stream:
+            temporary = Path(stream.name)
+            json.dump({key: str(value) for key, value in entries.items()}, stream, ensure_ascii=False, indent=2)
+            stream.write("\n")
+        temporary.replace(RUNNER_REGISTRY)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
-    # Xác định số lượng xe xăng lý tưởng
-    if num_agents <= 3:
-        target_refuels = 1
-    elif num_agents >= 8:
-        target_refuels = 3 if num_agents >= 12 else 2
-    else:  # 4..7 xe
-        # Map lớn (>= 18x18) hoặc xăng ngặt (<= 120) thì nên có 2 xe tiếp xăng để phủ 2 khu vực
-        if (W >= 18 or H >= 18 or W * H >= 300) or fuel_limit <= 120:
-            target_refuels = 2
-        else:
-            target_refuels = 1
+def unregister_runner(label):
+    if label not in CUSTOM_RUNNERS:
+        raise ValueError("Chỉ có thể xóa solver EXE tự thêm, không xóa solver có sẵn.")
+    entries = read_custom_runners()
+    entries.pop(label, None)
+    write_custom_runners(entries)
+    CUSTOM_RUNNERS.pop(label)
+    SOLVERS.pop(label, None)
 
-    # Tọa độ các quán mì
-    spot_coords = []
-    for s in spots:
-        p = s.get("pos", 0) if isinstance(s, dict) else int(s)
-        spot_coords.append((p % W, p // W))
 
-    # Tính khoảng cách từ mỗi xe tới quán mì gần nhất
-    candidates = []
-    for i, a in enumerate(agents):
-        pos = a.get("pos", 0) if isinstance(a, dict) else int(a)
-        ax, ay = pos % W, pos // W
-        if spot_coords:
-            min_dist = min(abs(ax - sx) + abs(ay - sy) for sx, sy in spot_coords)
-        else:
-            min_dist = 0
-        candidates.append((min_dist, i, ax, ay))
+def start_http_bot(executable, url, match_id, token):
+    executable = executable.resolve()
+    if not executable.is_file() or executable.suffix.lower() != ".exe":
+        raise ValueError(f"Không tìm thấy bot .exe: {executable}")
+    parsed = urlsplit(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname or parsed.username or parsed.password:
+        raise ValueError("URL bot phải là địa chỉ HTTP/HTTPS, không chứa tài khoản/mật khẩu.")
+    if any(not value.strip() or any(character in value for character in "\x00\r\n") for value in (url, match_id, token)):
+        raise ValueError("URL, Match ID và Token phải có giá trị hợp lệ.")
+    return subprocess.Popen(
+        [str(executable), "-transport", "http", "-url", url, "-match", match_id, "-token", token],
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, encoding="utf-8", errors="replace", bufsize=1, cwd=executable.parent,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
 
-    # Sắp xếp xe theo khoảng cách tới mì giảm dần (xe ở xa mì nhất được ưu tiên làm xe xăng)
-    candidates.sort(key=lambda c: c[0], reverse=True)
 
-    chosen_refuel_indices = set()
-    if target_refuels >= 1 and candidates:
-        # Xe xa quán mì nhất chắc chắn làm xe tiếp xăng
-        chosen_refuel_indices.add(candidates[0][1])
-        c1_x, c1_y = candidates[0][2], candidates[0][3]
+def stop_http_bot(process):
+    if process is None or process.poll() is not None:
+        return
+    if os.name == "nt":
+        result = subprocess.run(
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+            capture_output=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+        if result.returncode != 0 and process.poll() is None:
+            raise RuntimeError("Không dừng được cây tiến trình bot HTTP; hãy kiểm tra Task Manager.")
+    else:
+        process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
 
-        # Nếu cần 2 xe xăng: chọn trong nhóm xe xa mì chiếc nào phân tán xa xe xăng thứ nhất
-        if target_refuels >= 2 and len(candidates) > 1:
-            pool_end = max(2, (len(candidates) + 1) // 2)
-            pool = candidates[1:pool_end]
-            best_score = -1
-            best_idx = pool[0][1]
-            for min_dist, idx, ax, ay in pool:
-                dist_to_c1 = abs(ax - c1_x) + abs(ay - c1_y)
-                score = min_dist * 2.0 + dist_to_c1
-                if score > best_score:
-                    best_score = score
-                    best_idx = idx
-            chosen_refuel_indices.add(best_idx)
 
-        # Nếu cần >= 3 xe xăng: lấy thêm các xe tiếp theo trong danh sách xa mì
-        for _, idx, _, _ in candidates[2:]:
-            if len(chosen_refuel_indices) >= target_refuels:
+def run_runner(payload, timeout, executable=None):
+    executable = (executable if executable is not None else PROCON26_RUNNER).resolve()
+    if not executable.is_file() or executable.suffix.lower() != ".exe":
+        raise RuntimeError(f"Runner .exe not found: {executable}. Select one in Kho Solver.")
+    try:
+        result = subprocess.run(
+            [str(executable)], input=json.dumps(payload), text=True,
+            encoding="utf-8", capture_output=True, timeout=timeout, cwd=executable.parent,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise RuntimeError(f"Cannot run {executable}: {exc}") from exc
+    if result.returncode != 0:
+        raise RuntimeError(f"Runner exit code {result.returncode}: {result.stderr.strip()[:1000]}")
+    try:
+        response = json.loads(result.stdout)
+    except ValueError as exc:
+        raise RuntimeError("Runner must output one JSON object on stdout; log to stderr.") from exc
+    if not isinstance(response, dict) or response.get("ok") is not True:
+        detail = response.get("error", "missing ok=true") if isinstance(response, dict) else "not an object"
+        raise RuntimeError(f"Runner error: {detail}")
+    field = "roles" if payload["op"] == "roles" else "plan"
+    value = response.get(field)
+    agents = payload["config"].get("agents", []) if field == "roles" else payload["state"]["agents"]
+    if not isinstance(value, list) or len(value) != len(agents):
+        raise RuntimeError(f"Runner {field} must contain {len(agents)} entries.")
+    if field == "roles":
+        if not value or any(type(role) is not int or role not in (0, 1) for role in value):
+            raise RuntimeError("Runner roles must be integer 0/1.")
+    elif any(not isinstance(route, list) or any(type(action) is not int for action in route) for route in value):
+        raise RuntimeError("Runner plan must be an array of integer arrays.")
+    return value
+
+
+def validate_roles(roles, count):
+    if not isinstance(roles, list) or len(roles) != count or not roles or any(type(role) is not int or role not in (0, 1) for role in roles):
+        raise ValueError(f"Expected {count} agent roles containing only integer 0/1.")
+    return list(roles)
+
+
+def solve_roles(policy, map_config, cancelled=None, log_fn=None):
+    if policy.startswith("HTTP: "):
+        raise ValueError("HTTP Auto delegates role selection to the bot.")
+    agents = map_config.get("agents")
+    if not isinstance(agents, list) or not agents:
+        raise ValueError("Role selection requires the actual match agents.")
+    # ponytail: cap unknown selection windows at 5s; extend only with measured deadline-safe budgets.
+    budget = 5.0
+    advertised = map_config.get("agent_selection_time_limit")
+    if advertised is not None:
+        if isinstance(advertised, bool) or not math.isfinite(float(advertised)) or float(advertised) <= 0:
+            raise ValueError("Invalid agent selection time limit.")
+        budget = min(budget, float(advertised))
+    starts_at = float(map_config.get("startsAt", 0))
+    if not math.isfinite(starts_at):
+        raise ValueError("Invalid match start time.")
+    if starts_at > time.time():
+        budget = min(budget, starts_at - time.time())
+    budget = max(0.0, budget - 0.5)
+    if budget < 0.1:
+        raise RuntimeError("Not enough time to select and submit agent roles safely.")
+    if cancelled and cancelled():
+        raise RuntimeError("Role selection cancelled.")
+    if policy == "procon26" or policy in CUSTOM_RUNNERS:
+        if log_fn:
+            log_fn(f"JSON runner role selector: {policy}; timeout={budget:.2f}s.", "INFO")
+        roles = run_runner({"op": "roles", "config": map_config}, timeout=budget, executable=CUSTOM_RUNNERS.get(policy))
+        return validate_roles(roles, len(agents))
+    if policy.startswith("auto"):
+        policy = "alns"
+    if log_fn:
+        log_fn(f"Native role selector: {policy}; budget={budget:.2f}s (independent of day budget).", "INFO")
+    payload = {"config": map_config, "search": {"timeLimitMs": int(budget * 900)}}
+    with subprocess.Popen([str(HEX_BINARY), "select", policy], stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                          encoding="utf-8", cwd=ROOT) as process:
+        deadline = time.monotonic() + budget
+        pending = json.dumps(payload)
+        timed_out = False
+        while True:
+            try:
+                output, errors = process.communicate(pending, timeout=0.05)
                 break
-            chosen_refuel_indices.add(idx)
+            except subprocess.TimeoutExpired:
+                pending = None
+                if (cancelled and cancelled()) or time.monotonic() >= deadline:
+                    timed_out = True
+                    process.kill()
+                    output, errors = process.communicate()
+                    if cancelled and cancelled():
+                        raise RuntimeError("Role selection cancelled.")
+                    break
+        if process.returncode != 0 and not timed_out:
+            raise RuntimeError(f"Selector exited {process.returncode}: {errors[:500]}")
+        incumbent = None
+        for line in output.splitlines():
+            try:
+                result = json.loads(line)
+                incumbent = validate_roles(result.get("types"), len(agents))
+                if log_fn:
+                    log_fn(f"Role candidate: {incumbent}; phase={result.get('phase')}; score={result.get('score')}", "INFO")
+            except (ValueError, AttributeError):
+                continue
+        if incumbent is None:
+            raise RuntimeError(f"Selector returned no valid roles: {errors[:500]}")
+        return incumbent
 
-    roles = [1 if i in chosen_refuel_indices else 0 for i in range(num_agents)]
-    if 1 not in roles and num_agents > 0:
-        roles[0] = 1
-    return roles
 
+def confirmed_roles(status, count):
+    agents = status.get("agents", [])
+    if not agents:
+        return None
+    return validate_roles([agent.get("kind") for agent in agents], count)
+
+
+def reconcile_roles(api, match_id, token, config, policy, proposed, cancelled, log, confirmation_timeout=30):
+    count = len(config.get("agents", []))
+    status = api.get_game_status(match_id, token)
+    if status.get("finished") or status.get("status") == "finished":
+        raise RuntimeError("Match is finished; refusing role submission.")
+    existing = confirmed_roles(status, count)
+    if existing is not None:
+        log(f"[Xe] SERVER ĐÃ XÁC NHẬN: {existing}; giữ vai trò đã có trên server.", "SUCCESS")
+        return existing
+    roles = solve_roles(policy, config, cancelled, log) if proposed is None else validate_roles(proposed, count)
+    log(f"[Xe] ĐÃ CHỌN ({'solver' if proposed is None else 'thủ công'}): {roles}; chưa nộp.", "INFO")
+    if cancelled():
+        raise RuntimeError("Role submission cancelled.")
+    try:
+        api.submit_roles(match_id, token, roles, log_fn=log)
+    except Exception:
+        existing = confirmed_roles(api.get_game_status(match_id, token), count)
+        if existing is None:
+            raise
+        log(f"[Xe] SERVER ĐÃ XÁC NHẬN sau xung đột: {existing}; dùng vai trò thực tế.", "WARN")
+        return existing
+    log(f"[Xe] ĐÃ GỬI: {roles} — CHỜ XÁC NHẬN từ /status, tối đa {confirmation_timeout}s; không nộp lại.", "INFO")
+    deadline = time.monotonic() + confirmation_timeout
+    while True:
+        if cancelled():
+            raise RuntimeError("Đã dừng chờ xác nhận; yêu cầu đã gửi không bị hủy trên server.")
+        try:
+            status = api.get_game_status(match_id, token)
+        except (OSError, HTTPException):
+            log("[Xe] Chưa đọc được /status; tiếp tục chờ, không nộp lại.", "WARN")
+        else:
+            existing = confirmed_roles(status, count)
+            if existing is not None:
+                if existing != roles:
+                    log(f"[Xe] Vai trò server {existing} khác đề xuất {roles}; dùng vai trò server.", "WARN")
+                log(f"[Xe] SERVER ĐÃ XÁC NHẬN: {existing} (Server-confirmed roles).", "SUCCESS")
+                return existing
+            if status.get("finished") or status.get("status") == "finished":
+                raise RuntimeError("Trận đã kết thúc nhưng chưa xác nhận được vai trò xe.")
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("Đã gửi vai trò nhưng chưa xác nhận được từ /status. Không đồng nghĩa bị từ chối; chưa chạy kế hoạch, không tự nộp lại.")
+        time.sleep(min(1.0, remaining))
 
 def check_plan_score(map_config, day_info, actions):
     """Tính toán và kiểm tra điểm của action plan bằng hexudon.exe check."""
@@ -576,24 +720,22 @@ def check_plan_score(map_config, day_info, actions):
     return {"valid": False, "servings": -1}
 
 
-def solve_auto_race(map_config, day_info, roles, time_limit_ms=3000, log_fn=None, include_all=False, day_num=1, raw_status=None):
+def solve_auto_race(map_config, day_info, roles, time_limit_ms=3000, log_fn=None, include_all=False, day_num=1, raw_status=None, day_budget_sec=None):
     """Chạy song song các solver, đo điểm số thực tế bằng check và nộp phương án cao điểm nhất."""
     normalize_map_config(map_config)
+    if day_budget_sec and day_budget_sec > 0:
+        cand_timeout = max(2, int(day_budget_sec - 2))
+    else:
+        cand_timeout = max(15, int(time_limit_ms / 1000) + 8)
+
     def run_candidate(pol):
         t0 = time.time()
         try:
-            if pol == "procon26":
+            if pol == "procon26" or pol in CUSTOM_RUNNERS:
                 payload = build_procon26_payload(map_config, day_info, day_num, raw_status)
-                p = subprocess.run([str(PROCON26_RUNNER)], input=json.dumps(payload), text=True, capture_output=True, timeout=max(15, int(time_limit_ms / 1000) + 5), cwd=ROOT_PROCON26)
-                res = json.loads(p.stdout)
-                if not res.get("ok"):
-                    return pol, None, {"valid": False, "servings": -1}, time.time() - t0
-                plan = res["plan"]
-                if not res.get("ok"):
-                    return pol, None, {"valid": False, "servings": -1}, time.time() - t0
-                plan = res["plan"]
+                plan = run_runner(payload, timeout=cand_timeout, executable=CUSTOM_RUNNERS.get(pol))
             else:
-                search_cfg = {"time_limit_ms": time_limit_ms}
+                search_cfg = {"timeLimitMs": time_limit_ms, "time_limit_ms": time_limit_ms}
                 if pol == "mlns":
                     search_cfg["mlnsLookaheadDays"] = 2
                 p = subprocess.run(
@@ -601,7 +743,7 @@ def solve_auto_race(map_config, day_info, roles, time_limit_ms=3000, log_fn=None
                     input=json.dumps({"config": map_config, "day_info": day_info, "types": roles, "search": search_cfg}),
                     text=True,
                     capture_output=True,
-                    timeout=max(15, int(time_limit_ms / 1000) + 8),
+                    timeout=cand_timeout,
                     cwd=ROOT
                 )
                 if p.returncode != 0:
@@ -615,7 +757,7 @@ def solve_auto_race(map_config, day_info, roles, time_limit_ms=3000, log_fn=None
             return pol, None, {"valid": False, "servings": -1}, time.time() - t0
 
     if include_all:
-        candidates = ["aco_ls", "alns", "procon26", "local_search", "greedy"]
+        candidates = ["aco_ls", "alns", "procon26", "local_search", "greedy", *(name for name in CUSTOM_RUNNERS if not name.startswith("HTTP: "))]
         race_title = f"[Auto-Race ALL] Khởi tranh đại chiến {len(candidates)} Solver cùng lúc ({time_limit_ms}ms)..."
     else:
         candidates = ["aco_ls", "alns"]
@@ -670,25 +812,28 @@ def solve_auto_race(map_config, day_info, roles, time_limit_ms=3000, log_fn=None
     return [[-int(steps)] for _ in range(num_agents)]
 
 
-def solve_plan(policy, map_config, day_info, roles, day_num=1, raw_status=None, time_limit_ms=3000, log_fn=None):
+def solve_plan(policy, map_config, day_info, roles, day_num=1, raw_status=None, time_limit_ms=3000, log_fn=None, day_budget_sec=None):
+    if policy.startswith("HTTP: "):
+        raise ValueError("Bot HTTP tự giải và nộp bài; không dùng được như runner JSON.")
     normalize_map_config(map_config)
-    if policy == "procon26":
+    if policy == "procon26" or policy in CUSTOM_RUNNERS:
         payload = build_procon26_payload(map_config, day_info, day_num, raw_status)
-        p = subprocess.run([str(PROCON26_RUNNER)], input=json.dumps(payload), text=True, capture_output=True, timeout=30, cwd=ROOT_PROCON26)
-        res = json.loads(p.stdout)
-        if not res.get("ok"):
-            raise RuntimeError(res.get("error"))
-        return res["plan"]
+        pr_timeout = max(2, int(day_budget_sec - 2)) if (day_budget_sec and day_budget_sec > 0) else 30
+        return run_runner(payload, timeout=pr_timeout, executable=CUSTOM_RUNNERS.get(policy))
 
     if policy == "auto_race":
-        return solve_auto_race(map_config, day_info, roles, time_limit_ms=time_limit_ms, log_fn=log_fn, include_all=False, day_num=day_num, raw_status=raw_status)
+        return solve_auto_race(map_config, day_info, roles, time_limit_ms=time_limit_ms, log_fn=log_fn, include_all=False, day_num=day_num, raw_status=raw_status, day_budget_sec=day_budget_sec)
 
     if policy == "auto_race_all":
-        return solve_auto_race(map_config, day_info, roles, time_limit_ms=time_limit_ms, log_fn=log_fn, include_all=True, day_num=day_num, raw_status=raw_status)
+        return solve_auto_race(map_config, day_info, roles, time_limit_ms=time_limit_ms, log_fn=log_fn, include_all=True, day_num=day_num, raw_status=raw_status, day_budget_sec=day_budget_sec)
 
     # Standard hex policy
-    sub_timeout = max(35, int(time_limit_ms / 1000) + 25)
-    search_cfg = {"time_limit_ms": time_limit_ms}
+    if day_budget_sec and day_budget_sec > 0:
+        sub_timeout = max(2, int(day_budget_sec - 2))
+    else:
+        sub_timeout = max(35, int(time_limit_ms / 1000) + 25)
+
+    search_cfg = {"timeLimitMs": time_limit_ms, "time_limit_ms": time_limit_ms}
     if policy == "mlns":
         search_cfg["mlnsLookaheadDays"] = 2
     try:
@@ -748,15 +893,28 @@ class HexControlCenter(tk.Tk):
         
         self.api = HauiAPI()
         self.is_running = False
+        self.http_process = None
+        self.http_proxy = None
+        self.http_ready = threading.Event()
+        self.http_results = queue.Queue()
         self.current_match_id = None
         self.current_match_url = None
         self.stop_requested = False
         self.log_queue = queue.Queue()
+        self.role_mode = "manual"
+        self.role_results = queue.Queue()
         self.cached_map_config = None
         self.current_roles = [1, 0, 0, 0, 0, 0]
 
+        try:
+            CUSTOM_RUNNERS.update(read_custom_runners())
+            SOLVERS.update({name: name for name in CUSTOM_RUNNERS})
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Danh sách solver", f"Không đọc được {RUNNER_REGISTRY}: {exc}", parent=self)
+
         self.setup_styles()
         self.build_ui()
+        self.protocol("WM_DELETE_WINDOW", self.close_gui)
         self.check_log_queue()
 
     def setup_styles(self):
@@ -881,6 +1039,10 @@ class HexControlCenter(tk.Tk):
         self.cbo_solver = ttk.Combobox(row2, values=list(SOLVERS.keys()), width=45, state="readonly")
         self.cbo_solver.grid(row=1, column=1, columnspan=3, sticky=tk.W, padx=4, pady=4)
         self.cbo_solver.current(3)  # Mặc định Auto-Race
+        solver_buttons = ttk.Frame(row2)
+        solver_buttons.grid(row=1, column=4, padx=4, pady=4)
+        ttk.Button(solver_buttons, text="+ Thêm solver EXE", command=self.add_runner).pack(side=tk.LEFT)
+        ttk.Button(solver_buttons, text="Xóa solver", command=self.delete_runner).pack(side=tk.LEFT, padx=(4, 0))
 
         ttk.Label(row2, text="Thời gian giải/ngày:").grid(row=2, column=0, sticky=tk.W, padx=4, pady=4)
         self.cbo_timelimit = ttk.Combobox(row2, values=["1500ms (1.5s - Tối ưu tốc độ)", "3000ms (3.0s - Tiêu chuẩn)", "5000ms (5.0s - Chuyên sâu)", "8000ms (8.0s - Cực sâu)"], width=30, state="readonly")
@@ -910,8 +1072,8 @@ class HexControlCenter(tk.Tk):
         self.cbo_role_preset.current(0)
         self.cbo_role_preset.bind("<<ComboboxSelected>>", self.on_role_preset_changed)
 
-        self.btn_send_roles = ttk.Button(row_roles, text="📤 Nộp Vai Trò Xe Ngay", command=self.submit_roles_now)
-        self.btn_send_roles.grid(row=0, column=5, padx=8, pady=4)
+        btn_send_roles = ttk.Button(row_roles, text="📤 Nộp Vai Trò Xe Ngay", command=self.submit_roles_now)
+        btn_send_roles.grid(row=0, column=5, padx=8, pady=4)
 
         # Selector cho từng xe (động theo số lượng xe của map)
         self.agent_role_combos = []
@@ -947,6 +1109,8 @@ class HexControlCenter(tk.Tk):
         self.lbl_status_score.grid(row=0, column=1, sticky=tk.W, padx=16, pady=2)
 
     def on_preset_selected(self, event=None):
+        if self.is_running:
+            return
         idx = self.cbo_preset.current()
         if idx >= 0 and idx < len(PRESET_TEAMS):
             team = PRESET_TEAMS[idx]
@@ -960,31 +1124,18 @@ class HexControlCenter(tk.Tk):
                     break
 
     def update_agent_role_ui(self, num_agents):
-<<<<<<< HEAD
-        """Cập nhật giao diện chọn vai trò xe co giãn theo đúng số xe thực tế của map."""
-        # Loading/refreshing the match used to rebuild these widgets and silently
-        # reset a manual selection immediately before submit_roles_now() read it.
-        # Preserve the current values across a rebuild when the agent count is
-        # unchanged (and preserve the overlapping prefix when it changes).
-        previous_roles = []
-        for cbo in self.agent_role_combos:
-            previous_roles.append(1 if "(1)" in cbo.get() else 0)
-        preset_index = self.cbo_role_preset.current()
-=======
         """Cập nhật giao diện chọn vai trò xe co giãn theo đúng số xe thực tế của map, bảo toàn cấu hình người dùng."""
         if hasattr(self, "agent_role_combos") and len(self.agent_role_combos) == num_agents and hasattr(self, "current_roles") and len(self.current_roles) == num_agents:
             return
 
         # Giữ lại cấu hình vai trò hiện tại nếu có
+        auto_roles = getattr(self, "role_mode", "manual") == "auto"
         old_roles = getattr(self, "current_roles", [1] + [0] * max(0, num_agents - 1))
         if len(old_roles) < num_agents:
             roles = list(old_roles) + [0] * (num_agents - len(old_roles))
         else:
             roles = list(old_roles[:num_agents])
-        if 1 not in roles and num_agents > 0:
-            roles[0] = 1
         self.current_roles = roles
->>>>>>> 25f8223b2cb62d31b2cc74b5b6e9546451a20adc
 
         for w in self.frame_agents.winfo_children():
             w.destroy()
@@ -1003,33 +1154,27 @@ class HexControlCenter(tk.Tk):
             lbl = ttk.Label(self.frame_agents, text=f"Xe {i+1}:", font=("Segoe UI", 9, "bold"))
             lbl.grid(row=r, column=c, sticky=tk.W, padx=(8 if (i % 4) > 0 else 0, 2), pady=3)
             cbo = ttk.Combobox(self.frame_agents, values=["🏎️ Tuần tra (0)", "⛽ Tiếp xăng (1)"], width=13, state="readonly")
-<<<<<<< HEAD
-            if preset_index == 3 and i < len(previous_roles):
-                cbo.current(previous_roles[i])
-            else:
-                cbo.current(1 if i == 0 else 0)
-            cbo.grid(row=r, column=c + 1, sticky=tk.W, padx=(0, 6), pady=3)
-            self.agent_role_combos.append(cbo)
-
-        # Re-apply the selected preset and the correct editable/disabled state.
-        self.on_role_preset_changed()
-=======
             cbo.current(1 if roles[i] == 1 else 0)
             cbo.bind("<<ComboboxSelected>>", self.on_agent_role_changed)
             cbo.grid(row=r, column=c + 1, sticky=tk.W, padx=(0, 6), pady=3)
             self.agent_role_combos.append(cbo)
 
         # Cập nhật trạng thái hiển thị của preset combobox
-        if roles == [1] + [0] * (num_agents - 1):
+        if auto_roles:
+            self.cbo_role_preset.current(2)
+        elif roles == [1] + [0] * (num_agents - 1):
             self.cbo_role_preset.current(0)
         elif num_agents >= 2 and roles == [1, 1] + [0] * (num_agents - 2):
             self.cbo_role_preset.current(1)
         else:
             self.cbo_role_preset.set(f"✏️ Tùy chỉnh: {roles.count(1)} xe xăng ⛽, {roles.count(0)} xe tuần tra 🏎️")
->>>>>>> 25f8223b2cb62d31b2cc74b5b6e9546451a20adc
 
     def on_role_preset_changed(self, event=None):
+        if self.is_running:
+            self.log("Bot HTTP đang chạy trong trận; không thể thay đổi vai trò xe lúc này.", "WARN")
+            return
         idx = self.cbo_role_preset.current()
+        self.role_mode = "auto" if idx == 2 else "manual"
         num_agents = len(self.agent_role_combos)
         if num_agents <= 0:
             return
@@ -1043,62 +1188,17 @@ class HexControlCenter(tk.Tk):
             roles = [1 if (i in [0, 1] and num_agents > 1) else 0 for i in range(num_agents)]
             for i in range(num_agents):
                 self.agent_role_combos[i].current(1 if (i in [0, 1] and num_agents > 1) else 0)
-<<<<<<< HEAD
-        elif idx == 2:  # Solver auto
-            self.log(f"Đã chọn chế độ Tự động: Thuật toán Solver sẽ tự phân tích bản đồ để chọn vai trò tối ưu cho {num_agents} xe.", "INFO")
-
-        # The per-agent controls are meaningful only in manual mode. Showing
-        # preset values while disabling edits also makes it clear which list
-        # will actually be submitted.
-        combo_state = "readonly" if idx == 3 else "disabled"
-        for cbo in self.agent_role_combos:
-            cbo.configure(state=combo_state)
-
-    def get_selected_roles(self, map_config, policy):
-        idx = self.cbo_role_preset.current()
-        num_agents = len(map_config.get("agents", [])) if (map_config and "agents" in map_config) else len(self.agent_role_combos)
-        if idx == 0:  # Exactly one refuel car.
-            return [1 if i == 0 else 0 for i in range(num_agents)]
-        if idx == 1:  # Exactly two refuel cars (or all cars when only one exists).
-            return [1 if i < min(2, num_agents) else 0 for i in range(num_agents)]
-        if idx == 2:  # Solver auto
-            roles = solve_roles(policy, map_config)
-=======
             self.current_roles = roles
             self.log(f"Đã chọn: 2 xe tiếp xăng ⛽ (Xe 1, 2), {max(0, num_agents - 2)} xe tuần tra 🏎️", "INFO")
-        elif idx == 2:  # Solver auto: Tính toán và cập nhật trực quan ngay lập tức lên GUI!
-            solver_name = self.cbo_solver.get()
-            policy = SOLVERS.get(solver_name, "aco_ls")
-            map_cfg = self.cached_map_config
-            if not map_cfg:
-                try:
-                    with open(ROOT / "map_22x22.json", "r", encoding="utf-8") as f:
-                        map_cfg = json.load(f)
-                except Exception:
-                    map_cfg = {}
-            roles = solve_roles(policy, map_cfg)
->>>>>>> 25f8223b2cb62d31b2cc74b5b6e9546451a20adc
-            if len(roles) < num_agents:
-                roles = roles + [0] * (num_agents - len(roles))
-            elif len(roles) > num_agents:
-                roles = roles[:num_agents]
-<<<<<<< HEAD
-            return roles
-        # Manual mode: use exactly what is visible in the per-agent selectors.
-=======
-            if 1 not in roles and num_agents > 0:
-                roles[0] = 1
-            for i in range(num_agents):
-                self.agent_role_combos[i].current(1 if roles[i] == 1 else 0)
-            self.current_roles = roles
-            refuels = roles.count(1)
-            patrols = roles.count(0)
-            self.log(f"🤖 Solver ({solver_name}) đã chọn cấu hình xe: {roles} ({refuels} xe xăng ⛽, {patrols} xe tuần tra 🏎️)", "SUCCESS")
+        elif idx == 2:
+            self.log("Auto: roles will be computed from fresh server config when starting/submitting; HTTP delegates to bot.", "INFO")
         elif idx == 3:  # Tùy chỉnh thủ công
             self.log("✏️ Chế độ tùy chỉnh: Hãy chọn vai trò cho từng xe ở các ô bên dưới.", "INFO")
 
     def on_agent_role_changed(self, event=None):
->>>>>>> 25f8223b2cb62d31b2cc74b5b6e9546451a20adc
+        if self.is_running:
+            return
+        self.role_mode = "manual"
         roles = []
         for cbo in self.agent_role_combos:
             val = cbo.get()
@@ -1126,22 +1226,15 @@ class HexControlCenter(tk.Tk):
         elif hasattr(self, "current_roles") and self.current_roles:
             roles = list(self.current_roles)
 
-        if not roles:
-            roles = [1] + [0] * max(0, num_agents - 1)
-
-        if len(roles) < num_agents:
-            roles = roles + [0] * (num_agents - len(roles))
-        elif len(roles) > num_agents:
-            roles = roles[:num_agents]
-
-        if 1 not in roles and num_agents > 0:
-            roles[0] = 1
+        roles = validate_roles(roles, num_agents)
 
         self.current_roles = roles
         return roles
 
     def load_match_info(self, match_id=None):
         """Tải thông tin chi tiết của trận đấu từ server và tự động cập nhật GUI động."""
+        if self.is_running:
+            return None
         if not match_id:
             match_id = self.ent_match_id.get().strip()
         if not match_id:
@@ -1200,122 +1293,39 @@ class HexControlCenter(tk.Tk):
             return None
 
     def submit_roles_now(self):
+        if self.is_running:
+            return
+        policy = SOLVERS[self.cbo_solver.get()]
+        auto = getattr(self, "role_mode", "manual") == "auto"
+        if auto and policy.startswith("HTTP: "):
+            self.log("HTTP Auto: start the bot to let it choose roles; no manual submission.", "WARN")
+            return
         token = self.ent_token.get().strip()
         match_id = self.ent_match_id.get().strip()
-        solver_name = self.cbo_solver.get()
-        policy = SOLVERS.get(solver_name, "aco_ls")
-        if not token:
-            messagebox.showwarning("Thiếu Token", "Vui lòng nhập X-API-TOKEN của đội!")
+        if not token or not match_id:
+            messagebox.showwarning("Missing credentials", "Match ID and token are required.")
             return
-        if not match_id:
-            messagebox.showwarning("Thiếu Match ID", "Vui lòng nhập Match ID hoặc bấm nút 'Lấy trận mới nhất'!")
-            return
-
-        # Snapshot every Tk value before leaving the UI thread. Network calls,
-        # admin fallback, and automatic role solving can each take many seconds;
-        # doing them in this callback made Windows report the GUI as hung.
-        host = self.ent_host.get().strip() if hasattr(self, "ent_host") else DEFAULT_HOST
-        self.api.set_host(host)
-        preset_index = self.cbo_role_preset.current()
-        manual_roles = [1 if "(1)" in cbo.get() else 0
-                        for cbo in self.agent_role_combos]
-        self.btn_send_roles.configure(state=tk.DISABLED)
-        self.log("Đang tải cấu hình và nộp vai trò xe...", "INFO")
-        threading.Thread(
-            target=self._submit_roles_worker,
-            args=(match_id, token, policy, preset_index, manual_roles),
-            daemon=True,
-        ).start()
-
-    def _submit_roles_worker(self, match_id, token, policy, preset_index,
-                             manual_roles):
-        try:
-<<<<<<< HEAD
-            map_config = None
+        self.api.set_host(self.ent_host.get().strip())
+        roles = None if auto else list(self.get_selected_roles())
+        self.is_running = True
+        self.stop_requested = False
+        def worker():
             try:
-                map_config = self.api.get_game_config(match_id, token)
-            except Exception:
-                pass
-=======
-            map_config = self.cached_map_config
-            if not map_config:
-                map_config = self.load_match_info(match_id)
->>>>>>> 25f8223b2cb62d31b2cc74b5b6e9546451a20adc
-            if not map_config:
-                if "haui.ac.vn" in self.api.base_url.lower():
-                    try:
-                        self.api.login(DEFAULT_USER, DEFAULT_PASS)
-                        match_data = self.api.get_match(match_id)
-                        map_config = json.loads(match_data["match"]["map_config_json"])
-                    except Exception:
-                        pass
-            # Never use a local sample map to construct an official role answer:
-            # a different agent count is a guaranteed HTTP 400. Manual presets
-            # need only the already rendered selector count; automatic mode
-            # genuinely requires the authoritative map.
-            if map_config:
-                num_agents = len(map_config.get("agents", []))
-            else:
-                try:
-                    status = self.api.get_game_status(match_id, token)
-                    status_agents = status.get("agents", [])
-                    num_agents = len(status_agents) or len(manual_roles)
-                except Exception:
-                    num_agents = len(manual_roles)
-            if num_agents <= 0:
-                raise RuntimeError("Không xác định được số xe của trận đấu")
-            if preset_index == 0:
-                roles = [1 if i == 0 else 0 for i in range(num_agents)]
-            elif preset_index == 1:
-                roles = [1 if i < min(2, num_agents) else 0
-                         for i in range(num_agents)]
-            elif preset_index == 2:
-                if not map_config:
-                    raise RuntimeError(
-                        "Không tải được map thật từ server nên không thể tự động chọn xe"
-                    )
-                roles = solve_roles(policy, map_config)
-                roles = (roles + [0] * num_agents)[:num_agents]
-            else:
-                roles = (manual_roles + [0] * num_agents)[:num_agents]
-
-<<<<<<< HEAD
-            if len(roles) != num_agents or any(role not in (0, 1) for role in roles):
-                raise RuntimeError(
-                    f"Danh sách vai trò không hợp lệ: {roles} (cần {num_agents} xe)"
-                )
-            self.api.submit_roles(match_id, token, roles)
-            self.after(0, self._finish_submit_roles, roles, num_agents, None)
-=======
-            roles = self.get_selected_roles(map_config, policy)
-            num_agents = len(roles)
-            res = self.api.submit_roles(match_id, token, roles)
-            refuels = roles.count(1)
-            patrols = roles.count(0)
-            self.log(f"✅ ĐÃ NỘP VAI TRÒ XE THÀNH CÔNG: {roles}", "SUCCESS")
-            self.log(f"   📊 Cấu hình: {refuels} xe tiếp xăng ⛽ | {patrols} xe tuần tra 🏎️ (Tổng: {num_agents} xe)", "SUCCESS")
-            messagebox.showinfo("Nộp thành công", f"Đã nộp cấu hình xe lên Server:\n{roles}\n({refuels} xe tiếp xăng ⛽, {patrols} xe tuần tra 🏎️ / Tổng {num_agents} xe)")
->>>>>>> 25f8223b2cb62d31b2cc74b5b6e9546451a20adc
-        except Exception as e:
-            self.after(0, self._finish_submit_roles, None, 0, str(e))
-
-    def _finish_submit_roles(self, roles, num_agents, error):
-        self.btn_send_roles.configure(state=tk.NORMAL)
-        if error:
-            self.log(f"❌ Lỗi khi nộp vai trò xe: {error}", "ERROR")
-            messagebox.showerror("Lỗi nộp xe", f"Không thể nộp vai trò xe: {error}")
-            return
-        refuels = roles.count(1)
-        patrols = roles.count(0)
-        self.log(f"✅ ĐÃ NỘP VAI TRÒ XE THÀNH CÔNG: {roles}", "SUCCESS")
-        self.log(f"   📊 Cấu hình: {refuels} xe tiếp xăng ⛽ | {patrols} xe tuần tra 🏎️ (Tổng: {num_agents} xe)", "SUCCESS")
-        messagebox.showinfo(
-            "Nộp thành công",
-            f"Đã nộp cấu hình xe lên Server:\n{roles}\n"
-            f"({refuels} xe tiếp xăng ⛽, {patrols} xe tuần tra 🏎️ / Tổng {num_agents} xe)",
-        )
+                config = self.api.get_game_config(match_id, token)
+                actual = reconcile_roles(self.api, match_id, token, config, policy, roles,
+                                         lambda: self.stop_requested, self.log)
+                self.role_results.put(actual)
+            except TimeoutError as exc:
+                self.log(f"[Xe] CHƯA XÁC NHẬN: {exc}", "WARN")
+            except Exception as exc:
+                self.log(f"Role submission failed: {exc}", "ERROR")
+            finally:
+                self.is_running = False
+        threading.Thread(target=worker, daemon=True).start()
 
     def fetch_latest_match(self):
+        if self.is_running:
+            return
         host = self.ent_host.get().strip() if hasattr(self, "ent_host") else DEFAULT_HOST
         self.api.set_host(host)
         token = self.ent_token.get().strip()
@@ -1361,6 +1371,8 @@ class HexControlCenter(tk.Tk):
             self.log(f"❌ Lỗi khi tìm trận: {e}", "ERROR")
 
     def test_connection(self):
+        if self.is_running:
+            return
         token = self.ent_token.get().strip()
         match_id = self.ent_match_id.get().strip()
         host = self.ent_host.get().strip() if hasattr(self, "ent_host") else DEFAULT_HOST
@@ -1410,6 +1422,8 @@ class HexControlCenter(tk.Tk):
         self.log("=" * 65, "INFO")
 
     def start_live_match(self, mode="auto"):
+        if not self.runner_changes_allowed():
+            return
         token = self.ent_token.get().strip()
         match_id = self.ent_match_id.get().strip()
         host = self.ent_host.get().strip() if hasattr(self, "ent_host") else DEFAULT_HOST
@@ -1431,6 +1445,16 @@ class HexControlCenter(tk.Tk):
             messagebox.showwarning("Thiếu Match ID", "Vui lòng nhập Match ID hoặc bấm nút 'Lấy trận mới nhất'!")
             return
 
+        if getattr(self, "role_mode", "manual") == "auto":
+            selected_roles = None
+        else:
+            selected_roles = list(self.get_selected_roles())
+
+        if policy.startswith("HTTP: "):
+            if mode != "auto":
+                messagebox.showinfo("Bot HTTP", "Bot HTTP chỉ hỗ trợ TỰ ĐỘNG CẢ TRẬN, không hỗ trợ giải riêng một ngày.", parent=self)
+                return
+
         self.is_running = True
         self.stop_requested = False
         self.btn_start.config(state=tk.DISABLED)
@@ -1440,14 +1464,95 @@ class HexControlCenter(tk.Tk):
         self.current_match_id = match_id
         self.current_match_url = f"{self.api.base_url}/matches/{match_id}"
 
-        # Lấy vai trò xe an toàn trên main thread trước khi khởi chạy worker thread
-        selected_roles = list(self.get_selected_roles(self.cached_map_config, policy))
+        if policy.startswith("HTTP: "):
+            self.lbl_status_day.config(text="Trạng thái: Đang kiểm tra API qua proxy")
+            self.http_ready.clear()
+            self.lbl_status_score.config(text="Điểm số: xem log bot hoặc replay")
+            self.log(f"▶ {policy} | URL: {self.api.base_url} | Match: {match_id}", "INFO")
+            if selected_roles:
+                self.log(f"Cấu hình vai trò xe áp dụng từ GUI: {selected_roles}", "INFO")
+            else:
+                self.log("Vai trò xe: Tự động phân tích và chọn bởi Bot", "INFO")
+            self.log("Proxy kiểm tra kết nối rồi chuyển API bot sang API HAUI; giới hạn ms/ngày không áp dụng.", "INFO")
+            threading.Thread(target=self._run_http_session, args=(CUSTOM_RUNNERS[policy], self.api.base_url, match_id, token, selected_roles), daemon=True).start()
+            return
 
         threading.Thread(target=self._run_live_worker, args=(match_id, token, policy, time_limit_ms, mode, selected_roles), daemon=True).start()
 
     def stop_match(self):
         self.stop_requested = True
+        try:
+            stop_http_bot(self.http_process)
+            if self.http_proxy is not None:
+                self.http_proxy.close()
+        except (OSError, RuntimeError, subprocess.TimeoutExpired) as exc:
+            self.log(f"Lỗi dừng bot HTTP: {exc}", "ERROR")
+            return
         self.log("Đã yêu cầu DỪNG bot thi đấu.", "WARN")
+
+    def _run_http_session(self, executable, url, match_id, token, custom_roles=None):
+        proxy = None
+        process = None
+        returncode = -1
+        try:
+            ca_file = executable.parent / "windows-roots.pem"
+            proxy = BotProxy(url, match_id, token, self.log, ca_file=ca_file if ca_file.is_file() else None, custom_roles=custom_roles)
+            self.http_proxy = proxy
+            if self.stop_requested:
+                return
+            proxy.check_connection()
+            if self.stop_requested:
+                return
+            process = start_http_bot(executable, proxy.url, match_id, proxy.local_token)
+            self.http_process = process
+            self.http_ready.set()
+            if self.stop_requested:
+                stop_http_bot(self.http_process)
+            self.log("Bot đã khởi chạy qua proxy cục bộ; theo dõi các dòng [Proxy] để biết yêu cầu thực tế.", "INFO")
+            returncode = self._read_http_output(self.http_process, token, proxy.local_token)
+        except (OSError, ValueError, RuntimeError, HTTPException, subprocess.TimeoutExpired) as exc:
+            message = f"Không chạy được phiên Bot HTTP: {exc}".replace(token, "[TOKEN]")
+            if proxy is not None:
+                message = message.replace(proxy.local_token, "[LOCAL TOKEN]")
+            self.log(message, "ERROR")
+        finally:
+            if process is not None and process.poll() is None:
+                try:
+                    stop_http_bot(process)
+                except (OSError, RuntimeError, subprocess.TimeoutExpired) as exc:
+                    self.log(f"Chưa dừng được bot HTTP; hãy bấm DỪNG hoặc kiểm tra Task Manager: {exc}", "ERROR")
+                returncode = process.wait()
+            if proxy is not None:
+                proxy.close()
+            self.http_results.put(returncode)
+
+    def _read_http_output(self, process, token, local_token=""):
+        try:
+            with process.stdout:
+                for line in process.stdout:
+                    message = line.rstrip().replace(token, "[TOKEN]")
+                    if local_token:
+                        message = message.replace(local_token, "[LOCAL TOKEN]")
+                    self.log(message, "INFO")
+        except (OSError, ValueError) as exc:
+            message = f"Lỗi đọc log bot HTTP: {exc}".replace(token, "[TOKEN]")
+            if local_token:
+                message = message.replace(local_token, "[LOCAL TOKEN]")
+            self.log(message, "ERROR")
+        finally:
+            returncode = process.wait()
+        return returncode
+
+    def close_gui(self):
+        self.stop_requested = True
+        try:
+            stop_http_bot(self.http_process)
+            if self.http_proxy is not None:
+                self.http_proxy.close()
+        except (OSError, RuntimeError, subprocess.TimeoutExpired) as exc:
+            messagebox.showerror("Không đóng được bot HTTP", str(exc), parent=self)
+            return
+        self.destroy()
 
     def _run_live_worker(self, match_id, token, policy, time_limit_ms, mode="auto", user_roles=None):
         try:
@@ -1473,9 +1578,7 @@ class HexControlCenter(tk.Tk):
                     except Exception:
                         pass
                 if not map_config:
-                    self.log("Không lấy được map từ server, chuyển sang nạp bản đồ map_22x22.json...", "WARN")
-                    with open(ROOT / "map_22x22.json", "r", encoding="utf-8") as f:
-                        map_config = json.load(f)
+                    raise RuntimeError("Cannot load actual match config; refusing local-map fallback.")
 
             w = map_config.get("map", {}).get("width", "?")
             h = map_config.get("map", {}).get("height", "?")
@@ -1492,25 +1595,19 @@ class HexControlCenter(tk.Tk):
 
             # Chọn vai trò xe
             self.log("Đang kiểm tra và phân bổ vai trò xe...", "INFO")
-            roles = list(user_roles) if user_roles else self.get_selected_roles(map_config, policy)
-            if len(roles) < num_agents:
-                roles = roles + [0] * (num_agents - len(roles))
-            elif len(roles) > num_agents:
-                roles = roles[:num_agents]
-            if 1 not in roles and num_agents > 0:
-                roles[0] = 1
-            refuels = roles.count(1)
-            patrols = roles.count(0)
-            self.log(f"Cấu hình vai trò xe: {roles} ({refuels} xe tiếp xăng ⛽, {patrols} xe tuần tra 🏎️ / Tổng {num_agents} xe)", "INFO")
             try:
-                self.api.submit_roles(match_id, token, roles)
-                self.log(f"Nộp cấu hình xe lên server thành công: {roles}", "SUCCESS")
-            except Exception as e:
-                self.log(f"Nộp vai trò xe (có thể đã nộp trước đó): {e}", "INFO")
+                roles = reconcile_roles(self.api, match_id, token, map_config, policy, user_roles,
+                                        lambda: self.stop_requested, self.log)
+            except TimeoutError as exc:
+                self.log(f"[Xe] CHƯA XÁC NHẬN: {exc}", "WARN")
+                self.lbl_status_day.config(text="Trạng thái: Chưa xác nhận vai trò xe; chưa chạy kế hoạch")
+                return
+            self.role_results.put(roles)
 
             def solve_and_submit_day(target_day):
                 day_idx = target_day - 1
                 cfg_day_steps = map_config.get("daySteps", [])
+                cfg_day_seconds = map_config.get("daySeconds", [])
                 steps = cfg_day_steps[day_idx] if day_idx < len(cfg_day_steps) else 20
                 self.lbl_status_day.config(text=f"Trạng thái: Đang chuẩn bị Ngày {target_day}/{total_days}...")
                 self.log(f"\n--- NGÀY {target_day}/{total_days} (Dự kiến số bước: {steps}) ---", "INFO")
@@ -1527,8 +1624,7 @@ class HexControlCenter(tk.Tk):
                         m_status = st.get("status", "")
                         if m_status == "finished":
                             self.log("Server thông báo trận đấu đã hoàn thành!", "SUCCESS")
-                            day_st = st
-                            break
+                            return target_day, True
 
                         if cur is not None and cur >= target_day:
                             day_st = st
@@ -1547,7 +1643,7 @@ class HexControlCenter(tk.Tk):
                     poll_count += 1
 
                 if self.stop_requested:
-                    return
+                    return target_day, True
 
                 if not day_st:
                     try:
@@ -1565,7 +1661,14 @@ class HexControlCenter(tk.Tk):
                 elif cur_day_idx < len(cfg_day_steps):
                     steps = cfg_day_steps[cur_day_idx]
 
-                self.lbl_status_day.config(text=f"Trạng thái: Đang giải Ngày {cur_server_day}/{total_days} ({steps} bước)")
+                # Tự động điều chỉnh thời gian giải an toàn theo cấu hình daySeconds của map
+                day_sec = cfg_day_seconds[cur_day_idx] if cur_day_idx < len(cfg_day_seconds) else 45.0
+                safe_budget_ms = max(1000, int((day_sec - 2.5) * 1000))
+                effective_time_limit_ms = min(time_limit_ms, safe_budget_ms)
+                if effective_time_limit_ms < time_limit_ms:
+                    self.log(f"⚡ Map có nhịp ngày chỉ {day_sec}s. Tự động ép time limit từ {time_limit_ms}ms xuống {effective_time_limit_ms}ms để nộp bài trước hạn chót!", "WARN")
+
+                self.lbl_status_day.config(text=f"Trạng thái: Đang giải Ngày {cur_server_day}/{total_days} ({steps} bước | Giới hạn: {effective_time_limit_ms}ms)")
 
                 # Chuẩn hóa an toàn dữ liệu bản đồ, xe và giao thông
                 normalize_map_config(map_config)
@@ -1586,7 +1689,7 @@ class HexControlCenter(tk.Tk):
                 }
 
                 t0 = time.time()
-                plan = solve_plan(policy, map_config, day_info, roles, day_num=cur_server_day, raw_status=day_st, time_limit_ms=time_limit_ms, log_fn=self.log)
+                plan = solve_plan(policy, map_config, day_info, roles, day_num=cur_server_day, raw_status=day_st, time_limit_ms=effective_time_limit_ms, log_fn=self.log, day_budget_sec=day_sec)
                 elapsed = time.time() - t0
                 self.log(f"Đã giải xong trong {elapsed:.2f}s! Đang nộp bài...", "SUCCESS")
 
@@ -1596,6 +1699,9 @@ class HexControlCenter(tk.Tk):
                 else:
                     self.log(f"✅ Server ghi nhận nộp bài Ngày {cur_server_day} thành công: {ans_res}", "SUCCESS")
 
+                is_match_over = (cur_server_day >= total_days)
+                return cur_server_day, is_match_over
+
             # BƯỚC 2: Tiến hành giải theo chế độ đã chọn
             if mode == "step":
                 solve_and_submit_day(curr_day)
@@ -1603,24 +1709,50 @@ class HexControlCenter(tk.Tk):
                 self.log(f"🎯 ĐÃ HOÀN TẤT NỘP BÀI NGÀY {curr_day}!", "SUCCESS")
                 self.log("Bạn có thể mở Replay xem diễn biến, đổi Solver nếu muốn và bấm tiếp cho ngày sau.", "INFO")
             else:
-                for day_num in range(curr_day, total_days + 1):
-                    if self.stop_requested:
-                        self.log("Đã dừng theo yêu cầu của bạn.", "WARN")
+                current_target = curr_day
+                while not self.stop_requested and current_target <= total_days:
+                    # Kiểm tra tình trạng trận đấu trước khi giải
+                    try:
+                        st_pre = self.api.get_game_status(match_id, token)
+                        if st_pre.get("status") == "finished":
+                            self.log("🏁 Trận đấu đã hoàn thành trên server!", "SUCCESS")
+                            break
+                        live_cur = st_pre.get("currentDay", st_pre.get("current_day"))
+                        if live_cur and live_cur > current_target:
+                            current_target = live_cur
+                    except Exception:
+                        pass
+
+                    if current_target > total_days:
                         break
 
-                    solve_and_submit_day(day_num)
+                    res_day, is_done = solve_and_submit_day(current_target)
+                    if is_done or res_day >= total_days:
+                        break
 
                     # Chuyển ngày nếu là match luyện tập của admin
-                    if day_num < total_days and not self.stop_requested:
+                    if not self.stop_requested:
                         try:
                             self.api.match_action(match_id, "next_day")
-                            self.log(f"Đã gửi tín hiệu next_day sang Ngày {day_num + 1}", "INFO")
+                            self.log(f"Đã gửi tín hiệu next_day sang Ngày {res_day + 1}", "INFO")
                         except Exception:
                             pass
 
+                    current_target = res_day + 1
+
                 # BƯỚC 3: Tổng kết điểm
-                time.sleep(2.0)
                 final_m = None
+                poll_end = 0
+                while poll_end < 15 and not self.stop_requested:
+                    try:
+                        st_end = self.api.get_game_status(match_id, token)
+                        if st_end.get("status") == "finished" or st_end.get("finished"):
+                            break
+                    except Exception:
+                        pass
+                    time.sleep(1.0)
+                    poll_end += 1
+
                 try:
                     final_m = self.api.get_match(match_id)
                 except Exception:
@@ -1667,7 +1799,7 @@ class HexControlCenter(tk.Tk):
         self.cbo_v_team1.current(0)  # Team-ACO
 
         ttk.Label(box_select, text="Thuật toán:").grid(row=0, column=2, padx=6, pady=6)
-        self.cbo_v_policy1 = ttk.Combobox(box_select, values=list(SOLVERS.keys()), width=35, state="readonly")
+        self.cbo_v_policy1 = ttk.Combobox(box_select, values=[name for name in SOLVERS if not name.startswith("HTTP: ")], width=35, state="readonly")
         self.cbo_v_policy1.grid(row=0, column=3, padx=6, pady=6)
         self.cbo_v_policy1.current(0)  # ACO
 
@@ -1678,7 +1810,7 @@ class HexControlCenter(tk.Tk):
         self.cbo_v_team2.current(1)  # Team-ALNS
 
         ttk.Label(box_select, text="Thuật toán:").grid(row=1, column=2, padx=6, pady=6)
-        self.cbo_v_policy2 = ttk.Combobox(box_select, values=list(SOLVERS.keys()), width=35, state="readonly")
+        self.cbo_v_policy2 = ttk.Combobox(box_select, values=[name for name in SOLVERS if not name.startswith("HTTP: ")], width=35, state="readonly")
         self.cbo_v_policy2.grid(row=1, column=3, padx=6, pady=6)
         self.cbo_v_policy2.current(1)  # ALNS
 
@@ -1712,16 +1844,22 @@ class HexControlCenter(tk.Tk):
         self.btn_run_champ.pack(side=tk.LEFT, padx=(0, 6))
 
     def start_4way_match(self):
+        if not self.runner_changes_allowed():
+            return
         self.btn_run_4way.config(state=tk.DISABLED)
         self.btn_open_v_replay.config(state=tk.DISABLED)
         threading.Thread(target=self._run_multi_worker, args=(["Team-ACO", "Team-ALNS", "Team-MLNS", "Procon26-Bot"],), daemon=True).start()
 
     def start_6way_match(self):
+        if not self.runner_changes_allowed():
+            return
         self.btn_run_6way.config(state=tk.DISABLED)
         self.btn_open_v_replay.config(state=tk.DISABLED)
         threading.Thread(target=self._run_multi_worker, args=(["Team-ACO", "Team-ALNS", "Team-MLNS", "Procon26-Bot", "Team-LocalSearch", "Team-Greedy"],), daemon=True).start()
 
     def start_championship(self):
+        if not self.runner_changes_allowed():
+            return
         self.btn_run_champ.config(state=tk.DISABLED)
         threading.Thread(target=self._run_champ_worker, daemon=True).start()
 
@@ -1852,10 +1990,15 @@ class HexControlCenter(tk.Tk):
             self.btn_run_champ.config(state=tk.NORMAL)
 
     def start_versus_match(self):
+        if not self.runner_changes_allowed():
+            return
         t1_name = self.cbo_v_team1.get()
         p1 = SOLVERS[self.cbo_v_policy1.get()]
         t2_name = self.cbo_v_team2.get()
         p2 = SOLVERS[self.cbo_v_policy2.get()]
+        if p1.startswith("HTTP: ") or p2.startswith("HTTP: "):
+            messagebox.showinfo("Bot HTTP", "Bot HTTP chỉ dùng trong tab Thi Đấu Trực Tiếp.", parent=self)
+            return
 
         if t1_name == t2_name:
             messagebox.showwarning("Chọn Trùng Đội", "Vui lòng chọn 2 đội khác nhau để đối kháng!")
@@ -1975,6 +2118,13 @@ class HexControlCenter(tk.Tk):
         frame = ttk.Frame(self.tab_info, padding=14)
         frame.pack(fill=tk.BOTH, expand=True)
 
+        runner_box = ttk.LabelFrame(frame, text="Solver EXE - Runner JSON / Bot HTTP", padding=8)
+        runner_box.pack(fill=tk.X, pady=(0, 10))
+        ttk.Button(runner_box, text="+ Thêm solver EXE vào danh sách", command=self.add_runner).pack(anchor=tk.W, pady=4)
+        ttk.Label(runner_box, text="Chỉ chạy EXE tin cậy. Chọn đúng kiểu: Runner JSON hoặc Bot HTTP. Danh sách tự lưu.\n"
+                  "Để thay EXE của solver đã thêm, nhập lại cùng tên và xác nhận.",
+                  wraplength=500).pack(anchor=tk.W)
+
         info_text = (
             "📌 BẢNG XẾP HẠNG & CHIẾN LƯỢC CÁC THUẬT TOÁN:\n\n"
             "1. 🚀 Auto-Race (Chạy đua ACO & ALNS song song) - [KHUYÊN DÙNG SỐ 1 CHO THI ĐẤU THẬT]\n"
@@ -2007,6 +2157,64 @@ class HexControlCenter(tk.Tk):
         lbl_info.config(state=tk.DISABLED)
         lbl_info.pack(fill=tk.BOTH, expand=True)
 
+    def runner_changes_allowed(self):
+        arena_buttons = (self.btn_run_versus, self.btn_run_4way, self.btn_run_6way, self.btn_run_champ)
+        if self.is_running or any(str(button.cget("state")) == tk.DISABLED for button in arena_buttons):
+            messagebox.showwarning("Runner", "Hãy đợi tác vụ hiện tại kết thúc trước khi đổi runner.")
+            return False
+        return True
+
+    def add_runner(self):
+        if not self.runner_changes_allowed():
+            return
+        filename = filedialog.askopenfilename(parent=self, title="Thêm EXE tin cậy", filetypes=[("Executable", "*.exe")])
+        if not filename:
+            return
+        name = simpledialog.askstring("Tên solver", "Đặt tên solver mới (nhập tên cũ để thay EXE hoặc đổi kiểu).",
+                                      initialvalue=Path(filename).stem, parent=self)
+        if name is None:
+            return
+        http = messagebox.askyesnocancel("Kiểu EXE", "EXE này có phải Bot HTTP nhận -url, -match, -token?\n\nCó: Bot HTTP (ví dụ bot_v11.exe).\nKhông: Runner JSON roles / plan (ví dụ Procon26).\nHủy: không thêm.", parent=self)
+        if http is None:
+            return
+        try:
+            label = f"{'HTTP' if http else 'EXE'}: {name.strip()}"
+            existing = read_custom_runners()
+            if any(f"{prefix}: {name.strip()}" in existing for prefix in ("EXE", "HTTP")) and not messagebox.askyesno("Thay solver", f"Thay executable/kiểu của {name.strip()}?", parent=self):
+                return
+            label = register_runner(name, filename, transport="http" if http else "json")
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Không thêm được solver", str(exc), parent=self)
+            return
+        for combo in (self.cbo_solver, self.cbo_v_policy1, self.cbo_v_policy2):
+            choices = [name for name in SOLVERS if combo is self.cbo_solver or not name.startswith("HTTP: ")]
+            combo.configure(values=choices)
+            if combo.get() not in choices:
+                combo.current(0)
+        self.cbo_solver.set(label)
+        self.notebook.select(self.tab_live)
+        self.log(f"Đã lưu {label}: {CUSTOM_RUNNERS[label]}", "SUCCESS")
+
+    def delete_runner(self):
+        if not self.runner_changes_allowed():
+            return
+        label = self.cbo_solver.get()
+        if label not in CUSTOM_RUNNERS:
+            messagebox.showinfo("Xóa solver", "Hãy chọn solver EXE tự thêm trong danh sách thuật toán. Các solver có sẵn được giữ nguyên.", parent=self)
+            return
+        if not messagebox.askyesno("Xóa solver", f"Xóa {label} khỏi danh sách?\nFile EXE và DLL trên máy sẽ được giữ nguyên.", parent=self):
+            return
+        try:
+            unregister_runner(label)
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Không xóa được solver", str(exc), parent=self)
+            return
+        for combo in (self.cbo_solver, self.cbo_v_policy1, self.cbo_v_policy2):
+            combo.configure(values=[name for name in SOLVERS if combo is self.cbo_solver or not name.startswith("HTTP: ")])
+            if combo.get() not in SOLVERS:
+                combo.current(0)
+        self.log(f"Đã xóa {label} khỏi danh sách; giữ nguyên file EXE.", "INFO")
+
     def open_current_replay(self):
         if self.current_match_url:
             webbrowser.open(self.current_match_url)
@@ -2017,6 +2225,32 @@ class HexControlCenter(tk.Tk):
         self.log_queue.put((message, tag))
 
     def check_log_queue(self):
+        while not self.role_results.empty():
+            roles = self.role_results.get_nowait()
+            self.current_roles = roles
+            self.update_agent_role_ui(len(roles))
+            for combo, role in zip(self.agent_role_combos, roles):
+                combo.current(role)
+        for widget in [self.cbo_role_preset, self.cbo_solver, *self.agent_role_combos]:
+            widget.configure(state="disabled" if self.is_running else "readonly")
+        self.btn_stop.configure(state="normal" if self.is_running else "disabled")
+        for widget in (self.ent_host, self.ent_match_id, self.ent_token):
+            widget.configure(state="disabled" if self.is_running else "normal")
+
+        if self.http_ready.is_set():
+            self.http_ready.clear()
+            self.lbl_status_day.config(text="Trạng thái: Bot HTTP đang chạy qua proxy")
+        while not self.http_results.empty():
+            returncode = self.http_results.get_nowait()
+            status = "Đã dừng bot HTTP" if self.stop_requested else f"Bot HTTP đã thoát (mã {returncode})"
+            self.lbl_status_day.config(text=f"Trạng thái: {status}")
+            self.log(status, "INFO" if self.stop_requested or returncode == 0 else "ERROR")
+            self.http_process = None
+            self.http_proxy = None
+            self.is_running = False
+            self.btn_start.config(state=tk.NORMAL)
+            self.btn_step.config(state=tk.NORMAL)
+            self.btn_stop.config(state=tk.DISABLED)
         while not self.log_queue.empty():
             msg, tag = self.log_queue.get_nowait()
             ts = time.strftime("[%H:%M:%S] ")

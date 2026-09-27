@@ -107,15 +107,19 @@ hexudon::SearchLimits parse_search_limits(const boost::json::object& object,
   };
   if (const auto* value = object.if_contains("search")) {
     const auto& search = value->as_object();
-    explicit_time_limit = search.contains("timeLimitMs");
-    explicit_min_iterations = search.contains("minIterations");
-    explicit_max_iterations = search.contains("maxIterations");
-    explicit_stagnation = search.contains("stagnationIterations");
-    explicit_future_discount = search.contains("futureDiscountPercent");
+    explicit_time_limit = search.contains("timeLimitMs") || search.contains("time_limit_ms");
+    explicit_min_iterations = search.contains("minIterations") || search.contains("min_iterations");
+    explicit_max_iterations = search.contains("maxIterations") || search.contains("max_iterations");
+    explicit_stagnation = search.contains("stagnationIterations") || search.contains("stagnation_iterations");
+    explicit_future_discount = search.contains("futureDiscountPercent") || search.contains("future_discount_percent");
     assign(search, "timeLimitMs", limits.time_limit_ms);
+    assign(search, "time_limit_ms", limits.time_limit_ms);
     assign(search, "minIterations", limits.min_iterations);
+    assign(search, "min_iterations", limits.min_iterations);
     assign(search, "maxIterations", limits.max_iterations);
+    assign(search, "max_iterations", limits.max_iterations);
     assign(search, "stagnationIterations", limits.stagnation_iterations);
+    assign(search, "stagnation_iterations", limits.stagnation_iterations);
     assign(search, "seedIterations", limits.seed_iterations);
     assign(search, "finalAlnsIterations", limits.final_alns_iterations);
     assign(search, "exactNodes", limits.exact_nodes);

@@ -6417,14 +6417,7 @@ AgentTypes select_lns_agent_types(const MapConfig& config,
 
   std::vector<unsigned> masks;
   const unsigned limit = 1U << count;
-  const int minimum_refuelers =
-      count <= 1
-          ? 0
-          : (config.players > 1 && count <= 6 &&
-                     config.width * config.height > 300 &&
-                     config.fuel_limit < map_span
-                 ? 2
-                 : (config.fuel_limit * 2 >= map_span * 21 ? 0 : 1));
+  const int minimum_refuelers = 0;
   for (unsigned mask = 0; mask + 1 < limit; ++mask) {
     const int refuelers = std::popcount(mask);
     if (refuelers >= minimum_refuelers && refuelers <= 3) {
@@ -6570,7 +6563,7 @@ AgentTypes select_lns_agent_types(const MapConfig& config,
     add_finalist(index);
   }
   const int total_days = static_cast<int>(config.day_steps.size());
-  const int screening_days = std::min(3, total_days);
+  const int screening_days = total_days;
 
   struct TimedRoleResult {
     std::size_t ranked_index{};
@@ -6680,26 +6673,14 @@ AgentTypes select_lns_agent_types(const MapConfig& config,
     if (left.score[0] != right.score[0]) {
       return left.score[0] > right.score[0];
     }
-    // One extra patrol is allowed one daily type of positioning slack. The
-    // timed rollout does carry its forecast positions across days, but a car
-    // may be better staged on the real revealed day than that forecast says.
-    const int left_slack_worst = left.worst_daily + left_screen.patrols;
-    const int right_slack_worst = right.worst_daily + right_screen.patrols;
-    if (left_slack_worst != right_slack_worst) {
-      return left_slack_worst > right_slack_worst;
-    }
-    const int left_slack_cumulative =
-        left.score[1] + left_screen.patrols * screening_days;
-    const int right_slack_cumulative =
-        right.score[1] + right_screen.patrols * screening_days;
-    if (left_slack_cumulative != right_slack_cumulative) {
-      return left_slack_cumulative > right_slack_cumulative;
-    }
-    if (left_screen.patrols != right_screen.patrols) {
-      return left_screen.patrols > right_screen.patrols;
+    if (left.score[1] != right.score[1]) {
+      return left.score[1] > right.score[1];
     }
     if (left.score[2] != right.score[2]) {
       return left.score[2] > right.score[2];
+    }
+    if (left.worst_daily != right.worst_daily) {
+      return left.worst_daily > right.worst_daily;
     }
     if (left_screen.scheduled != right_screen.scheduled) {
       return left_screen.scheduled > right_screen.scheduled;
@@ -6845,12 +6826,12 @@ AgentTypes select_lns_agent_types(const MapConfig& config,
           const int robust_worst_daily =
               std::min(first.worst_daily, repeated.worst_daily);
           return std::tuple{
-              worst[0], robust_worst_daily + screen.patrols,
-              worst[1] + screen.patrols * screening_days, screen.patrols,
-              worst[2], sum[0],
-              first.worst_daily + repeated.worst_daily, sum[1], sum[2],
+              worst[0], worst[1], worst[2],
+              robust_worst_daily,
+              sum[0], sum[1], sum[2],
               std::min(first.ending_fuel, repeated.ending_fuel),
               screen.scheduled, screen.worst,
+              screen.patrols,
               -static_cast<long long>(screen.mask)};
         };
         const auto first_key =
