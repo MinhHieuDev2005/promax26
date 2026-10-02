@@ -1,0 +1,13 @@
+{
+  "cases/user-input-25x25.json": {
+    "n": 1,
+    "mean": 286,
+    "median": 286,
+    "min": 286,
+    "max": 286,
+    "stddev": 0.0,
+    "invalid": 0,
+    "coverage_failures": 0,
+    "deadline_failures": 0
+  }
+}

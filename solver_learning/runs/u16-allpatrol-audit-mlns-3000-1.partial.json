@@ -1,0 +1,2226 @@
+{
+  "experiment_id": "u16-allpatrol-audit-mlns-3000-1",
+  "parent": "u16-roleopt-final-h24-3000-1",
+  "hypothesis": "Screen fuel-aware whole-match solvers for all-patrol 16x16; only full 8/48 coverage can qualify.",
+  "solver": "mlns",
+  "budget_ms": 3000,
+  "random_seed": 1,
+  "threads": 4,
+  "snapshot_sha256": "cf51302e099dfc92b77b9efa25567a899cd28235523f777ca5b2b0b4e2a68c97",
+  "roles": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "search_overrides": {},
+  "status": "started",
+  "initial": {
+    "op": "plan",
+    "config": {
+      "startsAt": 0,
+      "daySeconds": [
+        60,
+        60,
+        60,
+        60,
+        60,
+        60
+      ],
+      "daySteps": [
+        32,
+        51,
+        70,
+        90,
+        109,
+        128
+      ],
+      "map": {
+        "height": 16,
+        "width": 16,
+        "cells": [
+          [
+            0,
+            1,
+            0,
+            2,
+            1,
+            2,
+            2,
+            2,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            2,
+            2,
+            2,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            2,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            3,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0
+          ],
+          [
+            1,
+            2,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            2
+          ],
+          [
+            3,
+            3,
+            3,
+            3,
+            3,
+            1,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ],
+          [
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            0,
+            0,
+            2,
+            0,
+            2,
+            0,
+            3,
+            1,
+            1,
+            0,
+            0,
+            1,
+            2,
+            1
+          ],
+          [
+            0,
+            2,
+            0,
+            0,
+            1,
+            0,
+            0,
+            2,
+            1,
+            2,
+            0,
+            2,
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            3,
+            2,
+            1,
+            0,
+            0,
+            2,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            3,
+            1,
+            0,
+            0,
+            0,
+            2,
+            1,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            2,
+            1,
+            3,
+            2,
+            2,
+            2,
+            1,
+            0,
+            2,
+            2
+          ],
+          [
+            2,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            1,
+            3,
+            1,
+            2,
+            0,
+            0,
+            2,
+            1,
+            0
+          ]
+        ]
+      },
+      "spots": [
+        {
+          "brand": 0,
+          "pos": 237,
+          "stocks": 1
+        },
+        {
+          "brand": 1,
+          "pos": 121,
+          "stocks": 1
+        },
+        {
+          "brand": 2,
+          "pos": 159,
+          "stocks": 1
+        },
+        {
+          "brand": 3,
+          "pos": 11,
+          "stocks": 1
+        },
+        {
+          "brand": 4,
+          "pos": 118,
+          "stocks": 2
+        },
+        {
+          "brand": 5,
+          "pos": 14,
+          "stocks": 1
+        },
+        {
+          "brand": 6,
+          "pos": 123,
+          "stocks": 4
+        },
+        {
+          "brand": 7,
+          "pos": 144,
+          "stocks": 4
+        },
+        {
+          "brand": 0,
+          "pos": 109,
+          "stocks": 4
+        },
+        {
+          "brand": 1,
+          "pos": 225,
+          "stocks": 4
+        }
+      ],
+      "agents": [
+        226,
+        71,
+        27,
+        90
+      ],
+      "fuelLimits": 32,
+      "players": 2,
+      "busyThreshold": 3,
+      "jammedThreshold": 5
+    },
+    "types": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "history": {
+      "distinct_brands": [],
+      "submitted_actions": [],
+      "cumulative_daily_types": 0,
+      "total_servings": 0
+    },
+    "day_info": {
+      "day": 0,
+      "agents": [
+        {
+          "kind": 0,
+          "pos": 226,
+          "fuel": 32
+        },
+        {
+          "kind": 0,
+          "pos": 71,
+          "fuel": 32
+        },
+        {
+          "kind": 0,
+          "pos": 27,
+          "fuel": 32
+        },
+        {
+          "kind": 0,
+          "pos": 90,
+          "fuel": 32
+        }
+      ],
+      "others": [],
+      "traffics": [
+        {
+          "pos": 1,
+          "status": 0
+        },
+        {
+          "pos": 4,
+          "status": 0
+        },
+        {
+          "pos": 40,
+          "status": 0
+        },
+        {
+          "pos": 67,
+          "status": 0
+        },
+        {
+          "pos": 79,
+          "status": 0
+        },
+        {
+          "pos": 80,
+          "status": 0
+        },
+        {
+          "pos": 82,
+          "status": 0
+        },
+        {
+          "pos": 84,
+          "status": 0
+        },
+        {
+          "pos": 85,
+          "status": 0
+        },
+        {
+          "pos": 100,
+          "status": 0
+        },
+        {
+          "pos": 112,
+          "status": 0
+        },
+        {
+          "pos": 116,
+          "status": 0
+        },
+        {
+          "pos": 125,
+          "status": 0
+        },
+        {
+          "pos": 133,
+          "status": 0
+        },
+        {
+          "pos": 146,
+          "status": 0
+        },
+        {
+          "pos": 147,
+          "status": 0
+        },
+        {
+          "pos": 155,
+          "status": 0
+        },
+        {
+          "pos": 169,
+          "status": 0
+        },
+        {
+          "pos": 170,
+          "status": 0
+        },
+        {
+          "pos": 173,
+          "status": 0
+        },
+        {
+          "pos": 175,
+          "status": 0
+        },
+        {
+          "pos": 180,
+          "status": 0
+        },
+        {
+          "pos": 184,
+          "status": 0
+        },
+        {
+          "pos": 188,
+          "status": 0
+        },
+        {
+          "pos": 196,
+          "status": 0
+        },
+        {
+          "pos": 197,
+          "status": 0
+        },
+        {
+          "pos": 198,
+          "status": 0
+        },
+        {
+          "pos": 202,
+          "status": 0
+        },
+        {
+          "pos": 207,
+          "status": 0
+        },
+        {
+          "pos": 217,
+          "status": 0
+        },
+        {
+          "pos": 222,
+          "status": 0
+        },
+        {
+          "pos": 224,
+          "status": 0
+        },
+        {
+          "pos": 229,
+          "status": 0
+        },
+        {
+          "pos": 231,
+          "status": 0
+        },
+        {
+          "pos": 236,
+          "status": 0
+        },
+        {
+          "pos": 247,
+          "status": 0
+        },
+        {
+          "pos": 249,
+          "status": 0
+        },
+        {
+          "pos": 254,
+          "status": 0
+        }
+      ]
+    }
+  },
+  "days": [
+    {
+      "day": 0,
+      "wall_ms": 3037.047,
+      "daily_types": 8,
+      "servings": 12,
+      "plan": [
+        [
+          5,
+          0,
+          0,
+          0,
+          1,
+          0,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1,
+          1,
+          -9
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          3,
+          2,
+          3,
+          3,
+          2,
+          2,
+          1,
+          2,
+          2,
+          1,
+          2,
+          2,
+          -2
+        ],
+        [
+          1,
+          2,
+          2,
+          2,
+          4,
+          4,
+          3,
+          4,
+          4,
+          3,
+          4,
+          5,
+          5,
+          -7
+        ],
+        [
+          4,
+          4,
+          2,
+          2,
+          2,
+          1,
+          2,
+          -18
+        ]
+      ],
+      "input_state": {
+        "day": 0,
+        "agents": [
+          {
+            "kind": 0,
+            "pos": 226,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 71,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 27,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 90,
+            "fuel": 32
+          }
+        ],
+        "others": [],
+        "traffics": [
+          {
+            "pos": 1,
+            "status": 0
+          },
+          {
+            "pos": 4,
+            "status": 0
+          },
+          {
+            "pos": 40,
+            "status": 0
+          },
+          {
+            "pos": 67,
+            "status": 0
+          },
+          {
+            "pos": 79,
+            "status": 0
+          },
+          {
+            "pos": 80,
+            "status": 0
+          },
+          {
+            "pos": 82,
+            "status": 0
+          },
+          {
+            "pos": 84,
+            "status": 0
+          },
+          {
+            "pos": 85,
+            "status": 0
+          },
+          {
+            "pos": 100,
+            "status": 0
+          },
+          {
+            "pos": 112,
+            "status": 0
+          },
+          {
+            "pos": 116,
+            "status": 0
+          },
+          {
+            "pos": 125,
+            "status": 0
+          },
+          {
+            "pos": 133,
+            "status": 0
+          },
+          {
+            "pos": 146,
+            "status": 0
+          },
+          {
+            "pos": 147,
+            "status": 0
+          },
+          {
+            "pos": 155,
+            "status": 0
+          },
+          {
+            "pos": 169,
+            "status": 0
+          },
+          {
+            "pos": 170,
+            "status": 0
+          },
+          {
+            "pos": 173,
+            "status": 0
+          },
+          {
+            "pos": 175,
+            "status": 0
+          },
+          {
+            "pos": 180,
+            "status": 0
+          },
+          {
+            "pos": 184,
+            "status": 0
+          },
+          {
+            "pos": 188,
+            "status": 0
+          },
+          {
+            "pos": 196,
+            "status": 0
+          },
+          {
+            "pos": 197,
+            "status": 0
+          },
+          {
+            "pos": 198,
+            "status": 0
+          },
+          {
+            "pos": 202,
+            "status": 0
+          },
+          {
+            "pos": 207,
+            "status": 0
+          },
+          {
+            "pos": 217,
+            "status": 0
+          },
+          {
+            "pos": 222,
+            "status": 0
+          },
+          {
+            "pos": 224,
+            "status": 0
+          },
+          {
+            "pos": 229,
+            "status": 0
+          },
+          {
+            "pos": 231,
+            "status": 0
+          },
+          {
+            "pos": 236,
+            "status": 0
+          },
+          {
+            "pos": 247,
+            "status": 0
+          },
+          {
+            "pos": 249,
+            "status": 0
+          },
+          {
+            "pos": 254,
+            "status": 0
+          }
+        ]
+      },
+      "ending_agents": [
+        {
+          "cell": 118,
+          "fuel": 16,
+          "type": 0
+        },
+        {
+          "cell": 159,
+          "fuel": 12,
+          "type": 0
+        },
+        {
+          "cell": 123,
+          "fuel": 18,
+          "type": 0
+        },
+        {
+          "cell": 109,
+          "fuel": 25,
+          "type": 0
+        }
+      ],
+      "diagnostics": {},
+      "acquisitions": [
+        {
+          "step": 2,
+          "spots": [
+            225,
+            11
+          ]
+        },
+        {
+          "step": 4,
+          "spots": [
+            121
+          ]
+        },
+        {
+          "step": 6,
+          "spots": [
+            118
+          ]
+        },
+        {
+          "step": 8,
+          "spots": [
+            14,
+            123
+          ]
+        },
+        {
+          "step": 12,
+          "spots": [
+            144
+          ]
+        },
+        {
+          "step": 14,
+          "spots": [
+            109
+          ]
+        },
+        {
+          "step": 20,
+          "spots": [
+            109
+          ]
+        },
+        {
+          "step": 23,
+          "spots": [
+            118
+          ]
+        },
+        {
+          "step": 25,
+          "spots": [
+            123
+          ]
+        },
+        {
+          "step": 30,
+          "spots": [
+            159
+          ]
+        }
+      ]
+    },
+    {
+      "day": 1,
+      "wall_ms": 3013.329,
+      "daily_types": 8,
+      "servings": 14,
+      "plan": [
+        [
+          -1,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          3,
+          4,
+          3,
+          3,
+          3,
+          -29
+        ],
+        [
+          -1,
+          3,
+          4,
+          4,
+          4,
+          4,
+          -42
+        ],
+        [
+          -1,
+          5,
+          5,
+          2,
+          2,
+          2,
+          1,
+          2,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          5,
+          5,
+          5,
+          -18
+        ],
+        [
+          -1,
+          5,
+          5,
+          4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          5,
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          -12
+        ]
+      ],
+      "input_state": {
+        "day": 1,
+        "agents": [
+          {
+            "kind": 0,
+            "pos": 118,
+            "fuel": 16
+          },
+          {
+            "kind": 0,
+            "pos": 159,
+            "fuel": 12
+          },
+          {
+            "kind": 0,
+            "pos": 123,
+            "fuel": 18
+          },
+          {
+            "kind": 0,
+            "pos": 109,
+            "fuel": 25
+          }
+        ],
+        "others": [],
+        "traffics": [
+          {
+            "pos": 1,
+            "status": 0
+          },
+          {
+            "pos": 4,
+            "status": 0
+          },
+          {
+            "pos": 40,
+            "status": 0
+          },
+          {
+            "pos": 67,
+            "status": 0
+          },
+          {
+            "pos": 79,
+            "status": 0
+          },
+          {
+            "pos": 80,
+            "status": 0
+          },
+          {
+            "pos": 82,
+            "status": 0
+          },
+          {
+            "pos": 84,
+            "status": 0
+          },
+          {
+            "pos": 85,
+            "status": 0
+          },
+          {
+            "pos": 100,
+            "status": 0
+          },
+          {
+            "pos": 112,
+            "status": 0
+          },
+          {
+            "pos": 116,
+            "status": 0
+          },
+          {
+            "pos": 125,
+            "status": 0
+          },
+          {
+            "pos": 133,
+            "status": 0
+          },
+          {
+            "pos": 146,
+            "status": 0
+          },
+          {
+            "pos": 147,
+            "status": 0
+          },
+          {
+            "pos": 155,
+            "status": 0
+          },
+          {
+            "pos": 169,
+            "status": 0
+          },
+          {
+            "pos": 170,
+            "status": 0
+          },
+          {
+            "pos": 173,
+            "status": 0
+          },
+          {
+            "pos": 175,
+            "status": 0
+          },
+          {
+            "pos": 180,
+            "status": 0
+          },
+          {
+            "pos": 184,
+            "status": 0
+          },
+          {
+            "pos": 188,
+            "status": 0
+          },
+          {
+            "pos": 196,
+            "status": 0
+          },
+          {
+            "pos": 197,
+            "status": 0
+          },
+          {
+            "pos": 198,
+            "status": 0
+          },
+          {
+            "pos": 202,
+            "status": 0
+          },
+          {
+            "pos": 207,
+            "status": 0
+          },
+          {
+            "pos": 217,
+            "status": 0
+          },
+          {
+            "pos": 222,
+            "status": 0
+          },
+          {
+            "pos": 224,
+            "status": 0
+          },
+          {
+            "pos": 229,
+            "status": 0
+          },
+          {
+            "pos": 231,
+            "status": 0
+          },
+          {
+            "pos": 236,
+            "status": 0
+          },
+          {
+            "pos": 247,
+            "status": 0
+          },
+          {
+            "pos": 249,
+            "status": 0
+          },
+          {
+            "pos": 254,
+            "status": 0
+          }
+        ]
+      },
+      "ending_agents": [
+        {
+          "cell": 225,
+          "fuel": 1,
+          "type": 0
+        },
+        {
+          "cell": 237,
+          "fuel": 5,
+          "type": 0
+        },
+        {
+          "cell": 11,
+          "fuel": 2,
+          "type": 0
+        },
+        {
+          "cell": 144,
+          "fuel": 0,
+          "type": 0
+        }
+      ],
+      "diagnostics": {},
+      "acquisitions": [
+        {
+          "step": 1,
+          "spots": [
+            118,
+            159,
+            123,
+            109
+          ]
+        },
+        {
+          "step": 5,
+          "spots": [
+            121
+          ]
+        },
+        {
+          "step": 7,
+          "spots": [
+            123
+          ]
+        },
+        {
+          "step": 9,
+          "spots": [
+            237
+          ]
+        },
+        {
+          "step": 12,
+          "spots": [
+            144
+          ]
+        },
+        {
+          "step": 15,
+          "spots": [
+            109
+          ]
+        },
+        {
+          "step": 22,
+          "spots": [
+            225
+          ]
+        },
+        {
+          "step": 27,
+          "spots": [
+            14
+          ]
+        },
+        {
+          "step": 28,
+          "spots": [
+            118
+          ]
+        },
+        {
+          "step": 33,
+          "spots": [
+            11
+          ]
+        },
+        {
+          "step": 39,
+          "spots": [
+            144
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "wall_ms": 3012.913,
+      "daily_types": 4,
+      "servings": 4,
+      "plan": [
+        [
+          -1,
+          -69
+        ],
+        [
+          -1,
+          -69
+        ],
+        [
+          -1,
+          -69
+        ],
+        [
+          -1,
+          -69
+        ]
+      ],
+      "input_state": {
+        "day": 2,
+        "agents": [
+          {
+            "kind": 0,
+            "pos": 225,
+            "fuel": 1
+          },
+          {
+            "kind": 0,
+            "pos": 237,
+            "fuel": 5
+          },
+          {
+            "kind": 0,
+            "pos": 11,
+            "fuel": 2
+          },
+          {
+            "kind": 0,
+            "pos": 144,
+            "fuel": 0
+          }
+        ],
+        "others": [],
+        "traffics": [
+          {
+            "pos": 1,
+            "status": 0
+          },
+          {
+            "pos": 4,
+            "status": 0
+          },
+          {
+            "pos": 40,
+            "status": 0
+          },
+          {
+            "pos": 67,
+            "status": 0
+          },
+          {
+            "pos": 79,
+            "status": 0
+          },
+          {
+            "pos": 80,
+            "status": 0
+          },
+          {
+            "pos": 82,
+            "status": 0
+          },
+          {
+            "pos": 84,
+            "status": 0
+          },
+          {
+            "pos": 85,
+            "status": 0
+          },
+          {
+            "pos": 100,
+            "status": 0
+          },
+          {
+            "pos": 112,
+            "status": 0
+          },
+          {
+            "pos": 116,
+            "status": 0
+          },
+          {
+            "pos": 125,
+            "status": 0
+          },
+          {
+            "pos": 133,
+            "status": 1
+          },
+          {
+            "pos": 146,
+            "status": 1
+          },
+          {
+            "pos": 147,
+            "status": 1
+          },
+          {
+            "pos": 155,
+            "status": 0
+          },
+          {
+            "pos": 169,
+            "status": 0
+          },
+          {
+            "pos": 170,
+            "status": 0
+          },
+          {
+            "pos": 173,
+            "status": 0
+          },
+          {
+            "pos": 175,
+            "status": 0
+          },
+          {
+            "pos": 180,
+            "status": 0
+          },
+          {
+            "pos": 184,
+            "status": 0
+          },
+          {
+            "pos": 188,
+            "status": 0
+          },
+          {
+            "pos": 196,
+            "status": 0
+          },
+          {
+            "pos": 197,
+            "status": 0
+          },
+          {
+            "pos": 198,
+            "status": 0
+          },
+          {
+            "pos": 202,
+            "status": 0
+          },
+          {
+            "pos": 207,
+            "status": 0
+          },
+          {
+            "pos": 217,
+            "status": 0
+          },
+          {
+            "pos": 222,
+            "status": 0
+          },
+          {
+            "pos": 224,
+            "status": 0
+          },
+          {
+            "pos": 229,
+            "status": 0
+          },
+          {
+            "pos": 231,
+            "status": 0
+          },
+          {
+            "pos": 236,
+            "status": 0
+          },
+          {
+            "pos": 247,
+            "status": 0
+          },
+          {
+            "pos": 249,
+            "status": 0
+          },
+          {
+            "pos": 254,
+            "status": 0
+          }
+        ]
+      },
+      "ending_agents": [
+        {
+          "cell": 225,
+          "fuel": 1,
+          "type": 0
+        },
+        {
+          "cell": 237,
+          "fuel": 5,
+          "type": 0
+        },
+        {
+          "cell": 11,
+          "fuel": 2,
+          "type": 0
+        },
+        {
+          "cell": 144,
+          "fuel": 0,
+          "type": 0
+        }
+      ],
+      "diagnostics": {},
+      "acquisitions": [
+        {
+          "step": 1,
+          "spots": [
+            225,
+            237,
+            11,
+            144
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "wall_ms": 3013.333,
+      "daily_types": 4,
+      "servings": 4,
+      "plan": [
+        [
+          -1,
+          -89
+        ],
+        [
+          -1,
+          -89
+        ],
+        [
+          -1,
+          -89
+        ],
+        [
+          -1,
+          -89
+        ]
+      ],
+      "input_state": {
+        "day": 3,
+        "agents": [
+          {
+            "kind": 0,
+            "pos": 225,
+            "fuel": 1
+          },
+          {
+            "kind": 0,
+            "pos": 237,
+            "fuel": 5
+          },
+          {
+            "kind": 0,
+            "pos": 11,
+            "fuel": 2
+          },
+          {
+            "kind": 0,
+            "pos": 144,
+            "fuel": 0
+          }
+        ],
+        "others": [],
+        "traffics": [
+          {
+            "pos": 1,
+            "status": 0
+          },
+          {
+            "pos": 4,
+            "status": 0
+          },
+          {
+            "pos": 40,
+            "status": 0
+          },
+          {
+            "pos": 67,
+            "status": 0
+          },
+          {
+            "pos": 79,
+            "status": 0
+          },
+          {
+            "pos": 80,
+            "status": 0
+          },
+          {
+            "pos": 82,
+            "status": 0
+          },
+          {
+            "pos": 84,
+            "status": 0
+          },
+          {
+            "pos": 85,
+            "status": 0
+          },
+          {
+            "pos": 100,
+            "status": 0
+          },
+          {
+            "pos": 112,
+            "status": 0
+          },
+          {
+            "pos": 116,
+            "status": 0
+          },
+          {
+            "pos": 125,
+            "status": 0
+          },
+          {
+            "pos": 133,
+            "status": 0
+          },
+          {
+            "pos": 146,
+            "status": 0
+          },
+          {
+            "pos": 147,
+            "status": 0
+          },
+          {
+            "pos": 155,
+            "status": 0
+          },
+          {
+            "pos": 169,
+            "status": 0
+          },
+          {
+            "pos": 170,
+            "status": 0
+          },
+          {
+            "pos": 173,
+            "status": 0
+          },
+          {
+            "pos": 175,
+            "status": 0
+          },
+          {
+            "pos": 180,
+            "status": 0
+          },
+          {
+            "pos": 184,
+            "status": 0
+          },
+          {
+            "pos": 188,
+            "status": 0
+          },
+          {
+            "pos": 196,
+            "status": 0
+          },
+          {
+            "pos": 197,
+            "status": 0
+          },
+          {
+            "pos": 198,
+            "status": 0
+          },
+          {
+            "pos": 202,
+            "status": 0
+          },
+          {
+            "pos": 207,
+            "status": 0
+          },
+          {
+            "pos": 217,
+            "status": 0
+          },
+          {
+            "pos": 222,
+            "status": 0
+          },
+          {
+            "pos": 224,
+            "status": 0
+          },
+          {
+            "pos": 229,
+            "status": 0
+          },
+          {
+            "pos": 231,
+            "status": 0
+          },
+          {
+            "pos": 236,
+            "status": 0
+          },
+          {
+            "pos": 247,
+            "status": 0
+          },
+          {
+            "pos": 249,
+            "status": 0
+          },
+          {
+            "pos": 254,
+            "status": 0
+          }
+        ]
+      },
+      "ending_agents": [
+        {
+          "cell": 225,
+          "fuel": 1,
+          "type": 0
+        },
+        {
+          "cell": 237,
+          "fuel": 5,
+          "type": 0
+        },
+        {
+          "cell": 11,
+          "fuel": 2,
+          "type": 0
+        },
+        {
+          "cell": 144,
+          "fuel": 0,
+          "type": 0
+        }
+      ],
+      "diagnostics": {},
+      "acquisitions": [
+        {
+          "step": 1,
+          "spots": [
+            225,
+            237,
+            11,
+            144
+          ]
+        }
+      ]
+    },
+    {
+      "day": 4,
+      "wall_ms": 3013.441,
+      "daily_types": 4,
+      "servings": 4,
+      "plan": [
+        [
+          -1,
+          -108
+        ],
+        [
+          -1,
+          -108
+        ],
+        [
+          -1,
+          -108
+        ],
+        [
+          -1,
+          -108
+        ]
+      ],
+      "input_state": {
+        "day": 4,
+        "agents": [
+          {
+            "kind": 0,
+            "pos": 225,
+            "fuel": 1
+          },
+          {
+            "kind": 0,
+            "pos": 237,
+            "fuel": 5
+          },
+          {
+            "kind": 0,
+            "pos": 11,
+            "fuel": 2
+          },
+          {
+            "kind": 0,
+            "pos": 144,
+            "fuel": 0
+          }
+        ],
+        "others": [],
+        "traffics": [
+          {
+            "pos": 1,
+            "status": 0
+          },
+          {
+            "pos": 4,
+            "status": 0
+          },
+          {
+            "pos": 40,
+            "status": 0
+          },
+          {
+            "pos": 67,
+            "status": 0
+          },
+          {
+            "pos": 79,
+            "status": 0
+          },
+          {
+            "pos": 80,
+            "status": 0
+          },
+          {
+            "pos": 82,
+            "status": 0
+          },
+          {
+            "pos": 84,
+            "status": 0
+          },
+          {
+            "pos": 85,
+            "status": 0
+          },
+          {
+            "pos": 100,
+            "status": 0
+          },
+          {
+            "pos": 112,
+            "status": 0
+          },
+          {
+            "pos": 116,
+            "status": 0
+          },
+          {
+            "pos": 125,
+            "status": 0
+          },
+          {
+            "pos": 133,
+            "status": 0
+          },
+          {
+            "pos": 146,
+            "status": 0
+          },
+          {
+            "pos": 147,
+            "status": 0
+          },
+          {
+            "pos": 155,
+            "status": 0
+          },
+          {
+            "pos": 169,
+            "status": 0
+          },
+          {
+            "pos": 170,
+            "status": 0
+          },
+          {
+            "pos": 173,
+            "status": 0
+          },
+          {
+            "pos": 175,
+            "status": 0
+          },
+          {
+            "pos": 180,
+            "status": 0
+          },
+          {
+            "pos": 184,
+            "status": 0
+          },
+          {
+            "pos": 188,
+            "status": 0
+          },
+          {
+            "pos": 196,
+            "status": 0
+          },
+          {
+            "pos": 197,
+            "status": 0
+          },
+          {
+            "pos": 198,
+            "status": 0
+          },
+          {
+            "pos": 202,
+            "status": 0
+          },
+          {
+            "pos": 207,
+            "status": 0
+          },
+          {
+            "pos": 217,
+            "status": 0
+          },
+          {
+            "pos": 222,
+            "status": 0
+          },
+          {
+            "pos": 224,
+            "status": 0
+          },
+          {
+            "pos": 229,
+            "status": 0
+          },
+          {
+            "pos": 231,
+            "status": 0
+          },
+          {
+            "pos": 236,
+            "status": 0
+          },
+          {
+            "pos": 247,
+            "status": 0
+          },
+          {
+            "pos": 249,
+            "status": 0
+          },
+          {
+            "pos": 254,
+            "status": 0
+          }
+        ]
+      },
+      "ending_agents": [
+        {
+          "cell": 225,
+          "fuel": 1,
+          "type": 0
+        },
+        {
+          "cell": 237,
+          "fuel": 5,
+          "type": 0
+        },
+        {
+          "cell": 11,
+          "fuel": 2,
+          "type": 0
+        },
+        {
+          "cell": 144,
+          "fuel": 0,
+          "type": 0
+        }
+      ],
+      "diagnostics": {},
+      "acquisitions": [
+        {
+          "step": 1,
+          "spots": [
+            225,
+            237,
+            11,
+            144
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "wall_ms": 3013.127,
+      "daily_types": 4,
+      "servings": 4,
+      "plan": [
+        [
+          -128
+        ],
+        [
+          -128
+        ],
+        [
+          -128
+        ],
+        [
+          -128
+        ]
+      ],
+      "input_state": {
+        "day": 5,
+        "agents": [
+          {
+            "kind": 0,
+            "pos": 225,
+            "fuel": 1
+          },
+          {
+            "kind": 0,
+            "pos": 237,
+            "fuel": 5
+          },
+          {
+            "kind": 0,
+            "pos": 11,
+            "fuel": 2
+          },
+          {
+            "kind": 0,
+            "pos": 144,
+            "fuel": 0
+          }
+        ],
+        "others": [],
+        "traffics": [
+          {
+            "pos": 1,
+            "status": 0
+          },
+          {
+            "pos": 4,
+            "status": 0
+          },
+          {
+            "pos": 40,
+            "status": 0
+          },
+          {
+            "pos": 67,
+            "status": 0
+          },
+          {
+            "pos": 79,
+            "status": 0
+          },
+          {
+            "pos": 80,
+            "status": 0
+          },
+          {
+            "pos": 82,
+            "status": 0
+          },
+          {
+            "pos": 84,
+            "status": 0
+          },
+          {
+            "pos": 85,
+            "status": 0
+          },
+          {
+            "pos": 100,
+            "status": 0
+          },
+          {
+            "pos": 112,
+            "status": 0
+          },
+          {
+            "pos": 116,
+            "status": 0
+          },
+          {
+            "pos": 125,
+            "status": 0
+          },
+          {
+            "pos": 133,
+            "status": 0
+          },
+          {
+            "pos": 146,
+            "status": 0
+          },
+          {
+            "pos": 147,
+            "status": 0
+          },
+          {
+            "pos": 155,
+            "status": 0
+          },
+          {
+            "pos": 169,
+            "status": 0
+          },
+          {
+            "pos": 170,
+            "status": 0
+          },
+          {
+            "pos": 173,
+            "status": 0
+          },
+          {
+            "pos": 175,
+            "status": 0
+          },
+          {
+            "pos": 180,
+            "status": 0
+          },
+          {
+            "pos": 184,
+            "status": 0
+          },
+          {
+            "pos": 188,
+            "status": 0
+          },
+          {
+            "pos": 196,
+            "status": 0
+          },
+          {
+            "pos": 197,
+            "status": 0
+          },
+          {
+            "pos": 198,
+            "status": 0
+          },
+          {
+            "pos": 202,
+            "status": 0
+          },
+          {
+            "pos": 207,
+            "status": 0
+          },
+          {
+            "pos": 217,
+            "status": 0
+          },
+          {
+            "pos": 222,
+            "status": 0
+          },
+          {
+            "pos": 224,
+            "status": 0
+          },
+          {
+            "pos": 229,
+            "status": 0
+          },
+          {
+            "pos": 231,
+            "status": 0
+          },
+          {
+            "pos": 236,
+            "status": 0
+          },
+          {
+            "pos": 247,
+            "status": 0
+          },
+          {
+            "pos": 249,
+            "status": 0
+          },
+          {
+            "pos": 254,
+            "status": 0
+          }
+        ]
+      },
+      "ending_agents": [
+        {
+          "cell": 225,
+          "fuel": 1,
+          "type": 0
+        },
+        {
+          "cell": 237,
+          "fuel": 5,
+          "type": 0
+        },
+        {
+          "cell": 11,
+          "fuel": 2,
+          "type": 0
+        },
+        {
+          "cell": 144,
+          "fuel": 0,
+          "type": 0
+        }
+      ],
+      "diagnostics": {},
+      "acquisitions": [
+        {
+          "step": 1,
+          "spots": [
+            225,
+            237,
+            11,
+            144
+          ]
+        }
+      ]
+    }
+  ]
+}

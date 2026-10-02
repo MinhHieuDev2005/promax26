@@ -231,14 +231,15 @@ hexudon::SearchLimits parse_search_limits(const boost::json::object& object,
       limits.stagnation_iterations = limits.time_limit_ms >= 0 ? 0 : 16;
     }
     if (!explicit_future_discount) limits.future_discount_percent = 90;
-  } else if (policy == "simple_lns") {
+  } else if (policy == "simple_lns" || policy == "sisr") {
     // Simple LNS derives its quality from repeated destroy-and-repair. Do not
     // stop the bounded untimed run after only a handful of whole-suffix moves.
     if (!explicit_min_iterations) limits.min_iterations = 32;
     if (!explicit_max_iterations) limits.max_iterations = 128;
     if (!explicit_stagnation) limits.stagnation_iterations = 0;
     if (!explicit_future_discount) limits.future_discount_percent = 90;
-  } else if (policy == "lns_dp") {
+  } else if (policy == "lns_dp" || policy == "window_dp" ||
+             policy == "window-dp") {
     if (!explicit_min_iterations) limits.min_iterations = 4;
     if (!explicit_max_iterations) limits.max_iterations = 16;
     if (!explicit_stagnation) limits.stagnation_iterations = 0;

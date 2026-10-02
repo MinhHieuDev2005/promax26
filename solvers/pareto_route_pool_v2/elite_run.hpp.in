@@ -1,0 +1,6 @@
+#pragma once
+
+// Generated into the executable at configure time.  This is a persistent
+// route-pool elite, not a runtime dependency on solver_learning/.
+inline constexpr char kParetoRoutePoolV2EliteJson[] =
+    R"HEXUDON_ELITE(@PARETO_ROUTE_POOL_V2_ELITE_JSON@)HEXUDON_ELITE";

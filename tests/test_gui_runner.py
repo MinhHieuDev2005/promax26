@@ -203,13 +203,145 @@ class RunnerTests(unittest.TestCase):
     def test_auto_race_all_includes_registered_runners(self):
         executable = Path("custom.exe")
         plan = [[-20]]
-        with patch.dict(gui.CUSTOM_RUNNERS, {"EXE: Custom": executable, "HTTP: Bot": Path("http.exe")}, clear=True), patch.object(gui, "normalize_map_config"), patch.object(gui, "build_procon26_payload", return_value={}), patch.object(gui, "run_runner", return_value=plan) as runner, patch.object(gui, "check_plan_score", return_value={"valid": True, "servings": 1}), patch.object(gui.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(plan), "")):
-            self.assertEqual(gui.solve_auto_race({}, {}, [1], include_all=True), plan)
+        response = {"ok": True, "plan": plan, "planner_state": {"warm": 1}}
+        context = gui.new_runner_context()
+        with patch.dict(gui.CUSTOM_RUNNERS, {"EXE: Custom": executable, "HTTP: Bot": Path("http.exe")}, clear=True), patch.object(gui, "normalize_map_config"), patch.object(gui, "run_runner", return_value=response) as runner, patch.object(gui, "check_plan_score", return_value={"valid": True, "servings": 1}), patch.object(gui.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(plan), "")):
+            self.assertEqual(gui.solve_auto_race(
+                {}, {"agents": [{}]}, [1], time_limit_ms=7000,
+                include_all=True, runner_context=context,
+            ), plan)
             self.assertTrue(any(call.kwargs.get("executable") == executable for call in runner.call_args_list))
             self.assertFalse(any(call.kwargs.get("executable") == Path("http.exe") for call in runner.call_args_list))
+            custom_call = next(call for call in runner.call_args_list
+                               if call.kwargs.get("executable") == executable)
+            self.assertEqual(custom_call.args[0]["search"]["timeLimitMs"], 7000)
+            self.assertTrue(custom_call.kwargs["return_response"])
+            self.assertIn("candidate", context["pending_planner_state"])
             runner.reset_mock()
             gui.solve_auto_race({}, {}, [1], include_all=False)
             runner.assert_not_called()
+
+    def test_auto_race_all_adapts_legacy_runner_budget_and_history(self):
+        v1 = Path("v1.exe")
+        h08 = Path("h08.exe")
+        plan = [[-20]]
+        seen = {v1: [], h08: []}
+
+        def run(payload, timeout, executable=None, return_response=False):
+            if executable in seen:
+                seen[executable].append(json.loads(json.dumps(payload)))
+            if executable == v1 and payload["search"]["timeLimitMs"] > 50000:
+                raise RuntimeError("Runner exit code 1: timeLimitMs must be 1..50000")
+            if executable == h08 and "history" in payload:
+                raise RuntimeError("Runner exit code 1: self-traffic history cannot replay: agent 5 lacks fuel")
+            return {"ok": True, "plan": plan}
+
+        context = gui.new_runner_context()
+        context["history"]["submitted_actions"] = [plan]
+        with patch.dict(gui.CUSTOM_RUNNERS, {"EXE: v1": v1, "EXE: h08": h08}, clear=True), \
+             patch.object(gui, "normalize_map_config"), \
+             patch.object(gui, "run_runner", side_effect=run), \
+             patch.object(gui, "check_plan_score", return_value={"valid": True, "servings": 1}), \
+             patch.object(gui.subprocess, "run", return_value=subprocess.CompletedProcess([], 1, "", "native failed")):
+            self.assertEqual(gui.solve_auto_race(
+                {}, {"agents": [{}]}, [1], time_limit_ms=60000,
+                include_all=True, runner_context=context,
+            ), plan)
+
+        self.assertEqual([item["search"]["timeLimitMs"] for item in seen[v1]], [60000, 50000])
+        self.assertIn("history", seen[h08][0])
+        self.assertNotIn("history", seen[h08][1])
+
+    def test_v2_payload_carries_budget_history_and_planner_state(self):
+        context = gui.new_runner_context()
+        context["planner_state"] = {"policy": "chokudai_v2", "suffix": []}
+        config = {
+            "map": {"width": 1, "height": 1, "cells": [[0]]},
+            "agents": [0], "spots": [{"pos": 0, "brand": 7, "stocks": 1}],
+        }
+        payload = gui.build_procon26_payload(
+            config, {"agents": [{"kind": 0, "pos": 0, "fuel": 1}], "steps": 3},
+            1, {}, context, 70000,
+        )
+        self.assertIs(payload["history"], context["history"])
+        self.assertEqual(payload["planner_state"], context["planner_state"])
+        self.assertEqual(payload["search"]["timeLimitMs"], 60000)
+        self.assertEqual(payload["search"]["randomSeed"], 1)
+
+    def test_v2_context_commits_only_accepted_day_data(self):
+        context = gui.new_runner_context()
+        plan = [[-3]]
+        config = {"spots": [{"brand": 2}, {"brand": 5}, {"brand": 5}]}
+        gui.commit_runner_day(context, config, plan, {"suffix": [plan]}, 9)
+        self.assertEqual(context["history"], {
+            "distinct_brands": [2, 5],
+            "submitted_actions": [plan],
+            "cumulative_daily_types": 2,
+            "total_servings": 9,
+        })
+        self.assertEqual(context["planner_state"], {"suffix": [plan]})
+
+    def test_runner_day_never_advances_from_local_history(self):
+        context = gui.new_runner_context()
+        context["history"]["submitted_actions"] = [[[1]], [[2]], [[3]]]
+        self.assertEqual(gui.read_server_day({"current_day": "4"}), 4)
+        self.assertEqual(gui.resume_runner_day({}, context), 1)
+        self.assertEqual(gui.resume_runner_day({"currentDay": 1}, context), 1)
+        self.assertEqual(gui.resume_runner_day({"current_day": 4}, context), 4)
+        config = {"daySteps": [1] * 5, "spots": [{"brand": i} for i in range(13)]}
+        self.assertEqual(gui.infer_server_day(
+            {"currentDay": 1, "score": {"total_udon_daily_types": 39}}, config), 4)
+
+    def test_runner_recovery_builds_neutral_past_days(self):
+        config = {
+            "agents": [4, 8], "daySteps": [10, 20, 30],
+            "spots": [{"brand": 2}, {"brand": 5}],
+        }
+        context = gui.recover_runner_context(config, 3)
+        self.assertTrue(context["recovered"])
+        self.assertEqual(context["history"]["submitted_actions"], [
+            [[-11], [-11]], [[-21], [-21]],
+        ])
+        self.assertEqual(context["history"]["distinct_brands"], [2, 5])
+        self.assertEqual(context["history"]["cumulative_daily_types"], 4)
+        self.assertEqual(context["history"]["total_servings"], 0)
+
+    def test_resubmission_replaces_pending_and_commits_on_day_advance(self):
+        config = {"agents": [0], "daySteps": [3, 3],
+                  "spots": [{"brand": 1}, {"brand": 2}]}
+        context = gui.new_runner_context()
+        gui.stage_runner_day(context, 1, [[-3]], {"revision": 1}, 4)
+        gui.stage_runner_day(context, 1, [[1, -2]], {"revision": 2}, 5)
+        self.assertEqual(context["history"]["submitted_actions"], [])
+        gui.reconcile_runner_context(context, config, 2)
+        self.assertEqual(context["history"]["submitted_actions"], [[[1, -2]]])
+        self.assertEqual(context["history"]["total_servings"], 5)
+        self.assertIsNone(context["pending"])
+
+    def test_reconcile_trims_revision_polluted_history(self):
+        config = {"agents": [0], "daySteps": [3] * 5,
+                  "spots": [{"brand": 1}]}
+        context = gui.new_runner_context()
+        context["history"]["submitted_actions"] = [[[1]]] * 5
+        context["servings_by_day"] = [1] * 5
+        events = gui.reconcile_runner_context(context, config, 1)
+        self.assertEqual(context["history"]["submitted_actions"], [])
+        self.assertEqual(context["history"]["total_servings"], 0)
+        self.assertTrue(any("trimmed" in event for event in events))
+
+    def test_solve_plan_preserves_runner_planner_state(self):
+        context = gui.new_runner_context()
+        response = {"ok": True, "plan": [[-3]], "planner_state": {"suffix": []}}
+        with patch.dict(gui.CUSTOM_RUNNERS, {"EXE: V2": Path("v2.exe")}, clear=True), \
+             patch.object(gui, "normalize_map_config"), \
+             patch.object(gui, "run_runner", return_value=response) as runner:
+            plan = gui.solve_plan("EXE: V2", {"agents": [0]},
+                                  {"agents": [{"kind": 0}], "steps": 3}, [0],
+                                  time_limit_ms=59000, runner_context=context)
+        self.assertEqual(plan, [[-3]])
+        self.assertEqual(context["pending_planner_state"], {"suffix": []})
+        self.assertTrue(runner.call_args.kwargs["return_response"])
+        self.assertEqual(runner.call_args.args[0]["search"]["timeLimitMs"], 59000)
 
     def test_runner_contract(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -246,6 +378,10 @@ class RunnerTests(unittest.TestCase):
 
                 run.return_value = subprocess.CompletedProcess([], 1, "", "missing DLL")
                 with self.assertRaisesRegex(RuntimeError, "missing DLL"):
+                    gui.run_runner(roles_payload, 3)
+                run.return_value = subprocess.CompletedProcess(
+                    [], 1, '{"ok":false,"error":"history/day mismatch"}', "")
+                with self.assertRaisesRegex(RuntimeError, "history/day mismatch"):
                     gui.run_runner(roles_payload, 3)
                 for error in [OSError("cannot launch"), subprocess.TimeoutExpired("runner", 3)]:
                     run.side_effect = error

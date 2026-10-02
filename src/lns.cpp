@@ -927,6 +927,374 @@ ActionPlan build_lns_plan(const MapConfig& config, const DayInfo& day,
   return best;
 }
 
+ActionPlan build_strategic_sa_plan(const MapConfig& config,
+                                   const DayInfo& day,
+                                   const PolicyHistory& history,
+                                   const AgentTypes& types,
+                                   const SearchLimits& limits) {
+  const auto started = std::chrono::steady_clock::now();
+  const auto deadline = started +
+                        std::chrono::milliseconds(
+                            std::max(0, limits.time_limit_ms));
+  const auto graph = build_aco_graph(config, day);
+  const auto meetings = build_aco_meeting_cache(graph);
+  std::vector<ActionPlan> seeds;
+  seeds.push_back(build_local_search_plan(config, day, history, types, limits));
+  for (const std::string policy : {"greedy", "utility_greedy", "fuel_aware",
+                                   "stock_maximiser", "coordinated"}) {
+    const auto forced = policy == "coordinated"
+                            ? coordinated_first_targets(config, day, history,
+                                                        types)
+                            : ForcedPaths{};
+    seeds.push_back(build_routing_plan(policy, config, day, history, types,
+                                       forced, limits));
+  }
+
+  struct State {
+    LnsSkeleton skeleton;
+    ActionPlan plan;
+    CandidateValue value;
+  };
+  std::optional<State> best;
+  for (auto& plan : seeds) {
+    auto evaluation = evaluate_candidate(config, day, history, plan);
+    if (!evaluation) continue;
+    State state{lns_skeleton_from_trace(config, day.agents.size(),
+                                       evaluation->trace),
+                std::move(plan), evaluation->value};
+    if (!best || state.value > best->value) best = std::move(state);
+  }
+  if (!best) return wait_plan(types.size(), config.day_steps[day.day]);
+  State current = *best;
+
+  std::vector<std::size_t> patrols;
+  for (std::size_t agent = 0; agent < types.size(); ++agent) {
+    if (types[agent] == AgentKind::Patrol) patrols.push_back(agent);
+  }
+  if (patrols.empty()) return best->plan;
+
+  std::mt19937_64 random(lns_seed(config, day, history) ^
+                         limits.random_seed ^ 0x5354524154454749ULL);
+  std::uniform_real_distribution<long double> unit(0.0L, 1.0L);
+  int score_scale = 0;
+  for (const auto& spot : config.spots) score_scale += spot.stocks;
+  const long double initial_temperature = std::max(2, score_scale) * 0.5L;
+  constexpr long double final_temperature = 0.05L;
+  const int minimum = std::max(0, limits.min_iterations);
+  const int maximum = std::max(minimum, limits.max_iterations);
+  auto nonempty_patrol = [&]() -> std::optional<std::size_t> {
+    std::vector<std::size_t> choices;
+    for (std::size_t agent : patrols) {
+      if (!current.skeleton.routes[agent].empty()) choices.push_back(agent);
+    }
+    if (choices.empty()) return std::nullopt;
+    return choices[static_cast<std::size_t>(random() % choices.size())];
+  };
+
+  int stagnation = 0;
+  for (int iteration = 0; iteration < maximum; ++iteration) {
+    if (limits.time_limit_ms >= 0 && iteration >= minimum &&
+        std::chrono::steady_clock::now() >= deadline) {
+      break;
+    }
+    LnsSkeleton candidate = current.skeleton;
+    const long double progress = maximum <= 1
+                                     ? 1.0L
+                                     : static_cast<long double>(iteration) /
+                                           (maximum - 1);
+    int move = static_cast<int>(random() % 100U);
+    if (progress > 0.65L) move = move < 65 ? move % 3 : move;
+    bool changed = false;
+
+    if (move < 20) {
+      const auto agent = nonempty_patrol();
+      if (agent && candidate.routes[*agent].size() >= 2) {
+        auto& route = candidate.routes[*agent];
+        const std::size_t left = random() % (route.size() - 1);
+        std::swap(route[left], route[left + 1]);
+        changed = true;
+      }
+    } else if (move < 38) {
+      const auto agent = nonempty_patrol();
+      if (agent && candidate.routes[*agent].size() >= 2) {
+        auto& route = candidate.routes[*agent];
+        const std::size_t left = random() % route.size();
+        const std::size_t right = random() % route.size();
+        if (left != right) {
+          std::swap(route[left], route[right]);
+          changed = true;
+        }
+      }
+    } else if (move < 54) {
+      const auto agent = nonempty_patrol();
+      if (agent && candidate.routes[*agent].size() >= 3) {
+        auto& route = candidate.routes[*agent];
+        std::size_t left = random() % route.size();
+        std::size_t right = random() % route.size();
+        if (left > right) std::swap(left, right);
+        if (left < right) {
+          std::reverse(route.begin() + static_cast<std::ptrdiff_t>(left),
+                       route.begin() + static_cast<std::ptrdiff_t>(right + 1));
+          changed = true;
+        }
+      }
+    } else if (move < 74) {
+      const auto source = nonempty_patrol();
+      if (source) {
+        const std::size_t target =
+            patrols[static_cast<std::size_t>(random() % patrols.size())];
+        auto& source_route = candidate.routes[*source];
+        const std::size_t from = random() % source_route.size();
+        const int spot = source_route[from];
+        source_route.erase(source_route.begin() +
+                           static_cast<std::ptrdiff_t>(from));
+        auto& target_route = candidate.routes[target];
+        const std::size_t to = random() % (target_route.size() + 1);
+        target_route.insert(target_route.begin() +
+                                static_cast<std::ptrdiff_t>(to),
+                            spot);
+        changed = *source != target || from != to;
+      }
+    } else if (move < 88 && patrols.size() >= 2) {
+      const std::size_t first =
+          patrols[static_cast<std::size_t>(random() % patrols.size())];
+      const std::size_t second =
+          patrols[static_cast<std::size_t>(random() % patrols.size())];
+      if (first != second && !candidate.routes[first].empty() &&
+          !candidate.routes[second].empty()) {
+        std::swap(candidate.routes[first][random() % candidate.routes[first].size()],
+                  candidate.routes[second][random() % candidate.routes[second].size()]);
+        changed = true;
+      }
+    } else {
+      const auto agent = nonempty_patrol();
+      if (agent) {
+        auto& route = candidate.routes[*agent];
+        const std::size_t position = random() % route.size();
+        const int old_spot = route[position];
+        std::vector<int> alternatives;
+        for (std::size_t spot = 0; spot < config.spots.size(); ++spot) {
+          if (config.spots[spot].brand == config.spots[old_spot].brand &&
+              static_cast<int>(spot) != old_spot &&
+              std::find(route.begin(), route.end(), static_cast<int>(spot)) ==
+                  route.end()) {
+            alternatives.push_back(static_cast<int>(spot));
+          }
+        }
+        if (!alternatives.empty()) {
+          route[position] = alternatives[static_cast<std::size_t>(
+              random() % alternatives.size())];
+          changed = true;
+        }
+      }
+    }
+    if (!changed) continue;
+
+    auto plan = decode_lns_skeleton(config, day, types, graph, meetings,
+                                    candidate);
+    if (!plan) continue;
+    auto value = candidate_value(config, day, history, *plan);
+    if (!value) continue;
+    const auto candidate_ordinal = alns_ordinal(*value, config, types);
+    const auto current_ordinal = alns_ordinal(current.value, config, types);
+    const long double temperature =
+        initial_temperature *
+        std::pow(final_temperature / initial_temperature, progress);
+    const bool accept =
+        candidate_ordinal >= current_ordinal ||
+        unit(random) <
+            std::exp(static_cast<long double>(candidate_ordinal -
+                                              current_ordinal) /
+                     temperature);
+    if (accept) {
+      current = {std::move(candidate), std::move(*plan), *value};
+    }
+    if (*value > best->value) {
+      best = current;
+      stagnation = 0;
+    } else {
+      ++stagnation;
+    }
+    if (limits.stagnation_iterations > 0 && iteration >= minimum &&
+        stagnation >= limits.stagnation_iterations) {
+      break;
+    }
+  }
+  return best->plan;
+}
+
+ActionPlan build_pareto_rcsp_plan(const MapConfig& config,
+                                  const DayInfo& day,
+                                  const PolicyHistory& history,
+                                  const AgentTypes& types,
+                                  const SearchLimits& limits) {
+  const auto graph = build_exact_pareto_graph(config, day);
+  const auto meetings = build_aco_meeting_cache(graph);
+  std::mt19937_64 random(lns_seed(config, day, history) ^
+                         limits.random_seed ^ 0x50415245544fULL);
+  ActionPlan best = build_routing_plan("utility_greedy", config, day, history,
+                                       types, {}, limits);
+  auto best_value = candidate_value(config, day, history, best);
+
+  // Each construction mode ranks insertions differently, but every route leg
+  // and rendezvous is decoded from the same nondominated (time, fuel) labels.
+  // Final selection always uses the authoritative simulator score.
+  for (int mode = 0; mode < 4; ++mode) {
+    LnsSkeleton skeleton;
+    skeleton.routes.resize(types.size());
+    repair_lns_skeleton(config, day, history, types, graph, skeleton, mode,
+                        random);
+    auto plan = decode_lns_skeleton(config, day, types, graph, meetings,
+                                    skeleton);
+    if (!plan) continue;
+    auto value = candidate_value(config, day, history, *plan);
+    if (!value || (best_value && *value <= *best_value)) continue;
+    best = std::move(*plan);
+    best_value = *value;
+  }
+  return best;
+}
+
+ActionPlan build_bsr_vlns_plan(const MapConfig& config, const DayInfo& day,
+                               const PolicyHistory& history,
+                               const AgentTypes& types,
+                               const SearchLimits& limits, int displacement) {
+  const auto started = std::chrono::steady_clock::now();
+  const auto deadline = started +
+                        std::chrono::milliseconds(
+                            std::max(0, limits.time_limit_ms));
+  displacement = std::clamp(displacement, 2, 5);
+  const auto graph = build_aco_graph(config, day);
+  const auto meetings = build_aco_meeting_cache(graph);
+  SearchLimits seed_limits = limits;
+  if (limits.time_limit_ms >= 0) {
+    const int elapsed = static_cast<int>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - started)
+            .count());
+    const int reserve = std::max(1'000, limits.time_limit_ms / 20);
+    seed_limits.time_limit_ms =
+        std::max(1, limits.time_limit_ms - elapsed - reserve);
+  }
+  ActionPlan best = build_lns_plan(config, day, history, types, seed_limits,
+                                   &graph, &meetings);
+  auto best_evaluation = evaluate_candidate(config, day, history, best);
+  if (!best_evaluation) return best;
+  LnsSkeleton skeleton = lns_skeleton_from_trace(
+      config, day.agents.size(), best_evaluation->trace);
+  CandidateValue best_value = best_evaluation->value;
+  const int rounds = limits.local_search_passes > 0
+                         ? limits.local_search_passes
+                         : 2;
+
+  for (int round = 0; round < rounds; ++round) {
+    if (limits.time_limit_ms >= 0 &&
+        std::chrono::steady_clock::now() >= deadline) break;
+    bool improved = false;
+    for (std::size_t agent = 0; agent < skeleton.routes.size(); ++agent) {
+      auto& route = skeleton.routes[agent];
+      const int window = displacement + 1;
+      for (int begin = 0; begin + 1 < static_cast<int>(route.size()); ++begin) {
+        if (limits.time_limit_ms >= 0 &&
+            std::chrono::steady_clock::now() >= deadline) break;
+        const int length = std::min(window,
+                                    static_cast<int>(route.size()) - begin);
+        const int states = 1 << length;
+        const int infinity = std::numeric_limits<int>::max() / 4;
+        std::vector<int> cost(static_cast<std::size_t>(states * length),
+                              infinity);
+        std::vector<int> parent(static_cast<std::size_t>(states * length), -1);
+        const int source = begin == 0
+                               ? graph.node_for_pos.at(day.agents[agent].pos)
+                               : graph.node_for_pos.at(config.spots[
+                                     route[static_cast<std::size_t>(begin - 1)]]
+                                                                   .pos);
+        auto node = [&](int local) {
+          return graph.node_for_pos.at(
+              config.spots[route[static_cast<std::size_t>(begin + local)]].pos);
+        };
+        for (int local = 0; local < length; ++local) {
+          cost[(1 << local) * length + local] =
+              lns_path_time(graph, source, node(local));
+        }
+        for (int mask = 1; mask < states; ++mask) {
+          const int position = std::popcount(static_cast<unsigned>(mask)) - 1;
+          for (int last = 0; last < length; ++last) {
+            const int current = cost[mask * length + last];
+            if (current >= infinity || (mask & (1 << last)) == 0) continue;
+            for (int next = 0; next < length; ++next) {
+              if ((mask & (1 << next)) != 0 ||
+                  std::abs(next - (position + 1)) > displacement) {
+                continue;
+              }
+              const int next_mask = mask | (1 << next);
+              const int candidate =
+                  current + lns_path_time(graph, node(last), node(next));
+              const int index = next_mask * length + next;
+              if (candidate < cost[index]) {
+                cost[index] = candidate;
+                parent[index] = last;
+              }
+            }
+          }
+        }
+        const int target = begin + length < static_cast<int>(route.size())
+                               ? graph.node_for_pos.at(config.spots[
+                                     route[static_cast<std::size_t>(begin + length)]]
+                                                                   .pos)
+                               : -1;
+        int last = -1;
+        int best_cost = infinity;
+        for (int candidate_last = 0; candidate_last < length;
+             ++candidate_last) {
+          int candidate = cost[(states - 1) * length + candidate_last];
+          if (target >= 0) {
+            candidate +=
+                lns_path_time(graph, node(candidate_last), target);
+          }
+          if (candidate < best_cost) {
+            best_cost = candidate;
+            last = candidate_last;
+          }
+        }
+        if (last < 0) continue;
+        std::vector<int> order(static_cast<std::size_t>(length));
+        int mask = states - 1;
+        for (int position = length - 1; position >= 0; --position) {
+          order[static_cast<std::size_t>(position)] = last;
+          const int previous = parent[mask * length + last];
+          mask ^= 1 << last;
+          last = previous;
+        }
+        bool changed = false;
+        for (int position = 0; position < length; ++position) {
+          changed |= order[static_cast<std::size_t>(position)] != position;
+        }
+        if (!changed) continue;
+        LnsSkeleton candidate = skeleton;
+        for (int position = 0; position < length; ++position) {
+          candidate.routes[agent][static_cast<std::size_t>(begin + position)] =
+              route[static_cast<std::size_t>(
+                  begin + order[static_cast<std::size_t>(position)])];
+        }
+        auto plan = decode_lns_skeleton(config, day, types, graph, meetings,
+                                        candidate);
+        if (!plan) continue;
+        auto value = candidate_value(config, day, history, *plan);
+        if (!value || *value <= best_value) continue;
+        skeleton = std::move(candidate);
+        best = std::move(*plan);
+        best_value = *value;
+        improved = true;
+        break;
+      }
+      if (improved) break;
+    }
+    if (!improved) break;
+  }
+  return best;
+}
+
 struct AlnsSolution {
   LnsSkeleton skeleton;
   AlnsTravelChoices travel;

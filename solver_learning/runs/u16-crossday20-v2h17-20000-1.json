@@ -1,0 +1,3388 @@
+{
+  "experiment_id": "u16-crossday20-v2h17-20000-1",
+  "parent": "u16-solve10-alns-10000-1",
+  "hypothesis": "Cross-day Chokudai preserves alternative endpoints and improves early-day servings while keeping 8/48.",
+  "solver": "v2h17",
+  "budget_ms": 20000,
+  "random_seed": 1,
+  "threads": 4,
+  "snapshot_sha256": "cf51302e099dfc92b77b9efa25567a899cd28235523f777ca5b2b0b4e2a68c97",
+  "roles": [
+    0,
+    1,
+    0,
+    0
+  ],
+  "search_overrides": {},
+  "status": "complete",
+  "initial": {
+    "op": "plan",
+    "config": {
+      "startsAt": 0,
+      "daySeconds": [
+        60,
+        60,
+        60,
+        60,
+        60,
+        60
+      ],
+      "daySteps": [
+        32,
+        51,
+        70,
+        90,
+        109,
+        128
+      ],
+      "map": {
+        "height": 16,
+        "width": 16,
+        "cells": [
+          [
+            0,
+            1,
+            0,
+            2,
+            1,
+            2,
+            2,
+            2,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            2,
+            2,
+            2,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            2,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            3,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0
+          ],
+          [
+            1,
+            2,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            2
+          ],
+          [
+            3,
+            3,
+            3,
+            3,
+            3,
+            1,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ],
+          [
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            0,
+            0,
+            2,
+            0,
+            2,
+            0,
+            3,
+            1,
+            1,
+            0,
+            0,
+            1,
+            2,
+            1
+          ],
+          [
+            0,
+            2,
+            0,
+            0,
+            1,
+            0,
+            0,
+            2,
+            1,
+            2,
+            0,
+            2,
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            3,
+            2,
+            1,
+            0,
+            0,
+            2,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            3,
+            1,
+            0,
+            0,
+            0,
+            2,
+            1,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            2,
+            1,
+            3,
+            2,
+            2,
+            2,
+            1,
+            0,
+            2,
+            2
+          ],
+          [
+            2,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            1,
+            3,
+            1,
+            2,
+            0,
+            0,
+            2,
+            1,
+            0
+          ]
+        ]
+      },
+      "spots": [
+        {
+          "brand": 0,
+          "pos": 237,
+          "stocks": 1
+        },
+        {
+          "brand": 1,
+          "pos": 121,
+          "stocks": 1
+        },
+        {
+          "brand": 2,
+          "pos": 159,
+          "stocks": 1
+        },
+        {
+          "brand": 3,
+          "pos": 11,
+          "stocks": 1
+        },
+        {
+          "brand": 4,
+          "pos": 118,
+          "stocks": 2
+        },
+        {
+          "brand": 5,
+          "pos": 14,
+          "stocks": 1
+        },
+        {
+          "brand": 6,
+          "pos": 123,
+          "stocks": 4
+        },
+        {
+          "brand": 7,
+          "pos": 144,
+          "stocks": 4
+        },
+        {
+          "brand": 0,
+          "pos": 109,
+          "stocks": 4
+        },
+        {
+          "brand": 1,
+          "pos": 225,
+          "stocks": 4
+        }
+      ],
+      "agents": [
+        226,
+        71,
+        27,
+        90
+      ],
+      "fuelLimits": 32,
+      "players": 2,
+      "busyThreshold": 3,
+      "jammedThreshold": 5
+    },
+    "types": [
+      0,
+      1,
+      0,
+      0
+    ],
+    "history": {
+      "distinct_brands": [],
+      "submitted_actions": [],
+      "cumulative_daily_types": 0,
+      "total_servings": 0
+    },
+    "day_info": {
+      "day": 0,
+      "agents": [
+        {
+          "kind": 0,
+          "pos": 226,
+          "fuel": 32
+        },
+        {
+          "kind": 1,
+          "pos": 71,
+          "fuel": 32
+        },
+        {
+          "kind": 0,
+          "pos": 27,
+          "fuel": 32
+        },
+        {
+          "kind": 0,
+          "pos": 90,
+          "fuel": 32
+        }
+      ],
+      "others": [],
+      "traffics": [
+        {
+          "pos": 1,
+          "status": 0
+        },
+        {
+          "pos": 4,
+          "status": 0
+        },
+        {
+          "pos": 40,
+          "status": 0
+        },
+        {
+          "pos": 67,
+          "status": 0
+        },
+        {
+          "pos": 79,
+          "status": 0
+        },
+        {
+          "pos": 80,
+          "status": 0
+        },
+        {
+          "pos": 82,
+          "status": 0
+        },
+        {
+          "pos": 84,
+          "status": 0
+        },
+        {
+          "pos": 85,
+          "status": 0
+        },
+        {
+          "pos": 100,
+          "status": 0
+        },
+        {
+          "pos": 112,
+          "status": 0
+        },
+        {
+          "pos": 116,
+          "status": 0
+        },
+        {
+          "pos": 125,
+          "status": 0
+        },
+        {
+          "pos": 133,
+          "status": 0
+        },
+        {
+          "pos": 146,
+          "status": 0
+        },
+        {
+          "pos": 147,
+          "status": 0
+        },
+        {
+          "pos": 155,
+          "status": 0
+        },
+        {
+          "pos": 169,
+          "status": 0
+        },
+        {
+          "pos": 170,
+          "status": 0
+        },
+        {
+          "pos": 173,
+          "status": 0
+        },
+        {
+          "pos": 175,
+          "status": 0
+        },
+        {
+          "pos": 180,
+          "status": 0
+        },
+        {
+          "pos": 184,
+          "status": 0
+        },
+        {
+          "pos": 188,
+          "status": 0
+        },
+        {
+          "pos": 196,
+          "status": 0
+        },
+        {
+          "pos": 197,
+          "status": 0
+        },
+        {
+          "pos": 198,
+          "status": 0
+        },
+        {
+          "pos": 202,
+          "status": 0
+        },
+        {
+          "pos": 207,
+          "status": 0
+        },
+        {
+          "pos": 217,
+          "status": 0
+        },
+        {
+          "pos": 222,
+          "status": 0
+        },
+        {
+          "pos": 224,
+          "status": 0
+        },
+        {
+          "pos": 229,
+          "status": 0
+        },
+        {
+          "pos": 231,
+          "status": 0
+        },
+        {
+          "pos": 236,
+          "status": 0
+        },
+        {
+          "pos": 247,
+          "status": 0
+        },
+        {
+          "pos": 249,
+          "status": 0
+        },
+        {
+          "pos": 254,
+          "status": 0
+        }
+      ]
+    }
+  },
+  "days": [
+    {
+      "day": 0,
+      "wall_ms": 20598.186,
+      "daily_types": 8,
+      "servings": 9,
+      "plan": [
+        [
+          5,
+          2,
+          2,
+          1,
+          1,
+          2,
+          2,
+          2,
+          1,
+          2,
+          1,
+          2,
+          2,
+          2,
+          2,
+          1,
+          2,
+          -2,
+          -2
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          3,
+          2,
+          3,
+          3,
+          2,
+          2,
+          1,
+          2,
+          2,
+          1,
+          2,
+          2,
+          -2
+        ],
+        [
+          1,
+          5,
+          5,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        [
+          4,
+          4,
+          2,
+          2,
+          2,
+          1,
+          2,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          -6
+        ]
+      ],
+      "input_state": {
+        "day": 0,
+        "agents": [
+          {
+            "kind": 0,
+            "pos": 226,
+            "fuel": 32
+          },
+          {
+            "kind": 1,
+            "pos": 71,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 27,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 90,
+            "fuel": 32
+          }
+        ],
+        "others": [],
+        "traffics": [
+          {
+            "pos": 1,
+            "status": 0
+          },
+          {
+            "pos": 4,
+            "status": 0
+          },
+          {
+            "pos": 40,
+            "status": 0
+          },
+          {
+            "pos": 67,
+            "status": 0
+          },
+          {
+            "pos": 79,
+            "status": 0
+          },
+          {
+            "pos": 80,
+            "status": 0
+          },
+          {
+            "pos": 82,
+            "status": 0
+          },
+          {
+            "pos": 84,
+            "status": 0
+          },
+          {
+            "pos": 85,
+            "status": 0
+          },
+          {
+            "pos": 100,
+            "status": 0
+          },
+          {
+            "pos": 112,
+            "status": 0
+          },
+          {
+            "pos": 116,
+            "status": 0
+          },
+          {
+            "pos": 125,
+            "status": 0
+          },
+          {
+            "pos": 133,
+            "status": 0
+          },
+          {
+            "pos": 146,
+            "status": 0
+          },
+          {
+            "pos": 147,
+            "status": 0
+          },
+          {
+            "pos": 155,
+            "status": 0
+          },
+          {
+            "pos": 169,
+            "status": 0
+          },
+          {
+            "pos": 170,
+            "status": 0
+          },
+          {
+            "pos": 173,
+            "status": 0
+          },
+          {
+            "pos": 175,
+            "status": 0
+          },
+          {
+            "pos": 180,
+            "status": 0
+          },
+          {
+            "pos": 184,
+            "status": 0
+          },
+          {
+            "pos": 188,
+            "status": 0
+          },
+          {
+            "pos": 196,
+            "status": 0
+          },
+          {
+            "pos": 197,
+            "status": 0
+          },
+          {
+            "pos": 198,
+            "status": 0
+          },
+          {
+            "pos": 202,
+            "status": 0
+          },
+          {
+            "pos": 207,
+            "status": 0
+          },
+          {
+            "pos": 217,
+            "status": 0
+          },
+          {
+            "pos": 222,
+            "status": 0
+          },
+          {
+            "pos": 224,
+            "status": 0
+          },
+          {
+            "pos": 229,
+            "status": 0
+          },
+          {
+            "pos": 231,
+            "status": 0
+          },
+          {
+            "pos": 236,
+            "status": 0
+          },
+          {
+            "pos": 247,
+            "status": 0
+          },
+          {
+            "pos": 249,
+            "status": 0
+          },
+          {
+            "pos": 254,
+            "status": 0
+          }
+        ]
+      },
+      "ending_agents": [
+        {
+          "cell": 159,
+          "fuel": 32,
+          "type": 0
+        },
+        {
+          "cell": 159,
+          "fuel": 32,
+          "type": 1
+        },
+        {
+          "cell": 144,
+          "fuel": 10,
+          "type": 0
+        },
+        {
+          "cell": 14,
+          "fuel": 19,
+          "type": 0
+        }
+      ],
+      "diagnostics": {
+        "score": [
+          8,
+          8,
+          9
+        ],
+        "projected_final": [
+          8,
+          48,
+          94
+        ],
+        "seed_projected_servings": 94,
+        "warm_valid": false,
+        "expansions": 48,
+        "evaluated": 773,
+        "rejected_coverage_or_invalid": 360,
+        "duplicates": 78,
+        "sweeps": 13,
+        "updates": 1,
+        "peak_frontier": 78,
+        "safe_bound_prunes": 110,
+        "improvements": [
+          {
+            "ms": 5014,
+            "servings": 94
+          }
+        ],
+        "exhaust_budget": false,
+        "elapsed_ms": 18999
+      },
+      "acquisitions": [
+        {
+          "step": 2,
+          "spots": [
+            225,
+            11
+          ]
+        },
+        {
+          "step": 4,
+          "spots": [
+            121
+          ]
+        },
+        {
+          "step": 8,
+          "spots": [
+            123
+          ]
+        },
+        {
+          "step": 14,
+          "spots": [
+            109
+          ]
+        },
+        {
+          "step": 21,
+          "spots": [
+            118
+          ]
+        },
+        {
+          "step": 26,
+          "spots": [
+            14
+          ]
+        },
+        {
+          "step": 28,
+          "spots": [
+            159
+          ]
+        },
+        {
+          "step": 32,
+          "spots": [
+            144
+          ]
+        }
+      ]
+    },
+    {
+      "day": 1,
+      "wall_ms": 19029.505,
+      "daily_types": 8,
+      "servings": 14,
+      "plan": [
+        [
+          -1,
+          3,
+          4,
+          4,
+          4,
+          4,
+          5,
+          0,
+          5,
+          0,
+          0,
+          5,
+          5,
+          0,
+          0,
+          5,
+          0,
+          1,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          3,
+          4,
+          3,
+          3,
+          3
+        ],
+        [
+          5,
+          5,
+          5,
+          4,
+          5,
+          4,
+          5,
+          5,
+          0,
+          0,
+          5,
+          0,
+          1,
+          4,
+          -3,
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          2,
+          3,
+          3,
+          3,
+          4,
+          4
+        ],
+        [
+          -1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1,
+          1,
+          -12,
+          1,
+          1,
+          1,
+          0,
+          1,
+          2,
+          3,
+          3,
+          3,
+          3,
+          3,
+          2,
+          1,
+          2
+        ],
+        [
+          -1,
+          5,
+          5,
+          5,
+          4,
+          3,
+          3,
+          3,
+          3,
+          3,
+          4,
+          5,
+          5,
+          5,
+          5,
+          -23
+        ]
+      ],
+      "input_state": {
+        "day": 1,
+        "agents": [
+          {
+            "kind": 0,
+            "pos": 159,
+            "fuel": 32
+          },
+          {
+            "kind": 1,
+            "pos": 159,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 144,
+            "fuel": 10
+          },
+          {
+            "kind": 0,
+            "pos": 14,
+            "fuel": 19
+          }
+        ],
+        "others": [],
+        "traffics": [
+          {
+            "pos": 1,
+            "status": 0
+          },
+          {
+            "pos": 4,
+            "status": 0
+          },
+          {
+            "pos": 40,
+            "status": 0
+          },
+          {
+            "pos": 67,
+            "status": 0
+          },
+          {
+            "pos": 79,
+            "status": 0
+          },
+          {
+            "pos": 80,
+            "status": 0
+          },
+          {
+            "pos": 82,
+            "status": 0
+          },
+          {
+            "pos": 84,
+            "status": 0
+          },
+          {
+            "pos": 85,
+            "status": 0
+          },
+          {
+            "pos": 100,
+            "status": 0
+          },
+          {
+            "pos": 112,
+            "status": 0
+          },
+          {
+            "pos": 116,
+            "status": 0
+          },
+          {
+            "pos": 125,
+            "status": 0
+          },
+          {
+            "pos": 133,
+            "status": 0
+          },
+          {
+            "pos": 146,
+            "status": 0
+          },
+          {
+            "pos": 147,
+            "status": 0
+          },
+          {
+            "pos": 155,
+            "status": 0
+          },
+          {
+            "pos": 169,
+            "status": 0
+          },
+          {
+            "pos": 170,
+            "status": 0
+          },
+          {
+            "pos": 173,
+            "status": 0
+          },
+          {
+            "pos": 175,
+            "status": 0
+          },
+          {
+            "pos": 180,
+            "status": 0
+          },
+          {
+            "pos": 184,
+            "status": 0
+          },
+          {
+            "pos": 188,
+            "status": 0
+          },
+          {
+            "pos": 196,
+            "status": 0
+          },
+          {
+            "pos": 197,
+            "status": 0
+          },
+          {
+            "pos": 198,
+            "status": 0
+          },
+          {
+            "pos": 202,
+            "status": 0
+          },
+          {
+            "pos": 207,
+            "status": 0
+          },
+          {
+            "pos": 217,
+            "status": 0
+          },
+          {
+            "pos": 222,
+            "status": 0
+          },
+          {
+            "pos": 224,
+            "status": 0
+          },
+          {
+            "pos": 229,
+            "status": 0
+          },
+          {
+            "pos": 231,
+            "status": 0
+          },
+          {
+            "pos": 236,
+            "status": 0
+          },
+          {
+            "pos": 247,
+            "status": 0
+          },
+          {
+            "pos": 249,
+            "status": 0
+          },
+          {
+            "pos": 254,
+            "status": 0
+          }
+        ]
+      },
+      "ending_agents": [
+        {
+          "cell": 225,
+          "fuel": 17,
+          "type": 0
+        },
+        {
+          "cell": 121,
+          "fuel": 32,
+          "type": 1
+        },
+        {
+          "cell": 109,
+          "fuel": 17,
+          "type": 0
+        },
+        {
+          "cell": 121,
+          "fuel": 32,
+          "type": 0
+        }
+      ],
+      "diagnostics": {
+        "score": [
+          8,
+          8,
+          14
+        ],
+        "projected_final": [
+          8,
+          48,
+          94
+        ],
+        "seed_projected_servings": 94,
+        "warm_valid": true,
+        "expansions": 54,
+        "evaluated": 1367,
+        "rejected_coverage_or_invalid": 784,
+        "duplicates": 98,
+        "sweeps": 20,
+        "updates": 1,
+        "peak_frontier": 79,
+        "safe_bound_prunes": 271,
+        "improvements": [
+          {
+            "ms": 1001,
+            "servings": 94
+          }
+        ],
+        "exhaust_budget": false,
+        "elapsed_ms": 18999
+      },
+      "acquisitions": [
+        {
+          "step": 1,
+          "spots": [
+            159,
+            144,
+            14
+          ]
+        },
+        {
+          "step": 7,
+          "spots": [
+            11
+          ]
+        },
+        {
+          "step": 9,
+          "spots": [
+            237
+          ]
+        },
+        {
+          "step": 12,
+          "spots": [
+            118
+          ]
+        },
+        {
+          "step": 19,
+          "spots": [
+            109
+          ]
+        },
+        {
+          "step": 24,
+          "spots": [
+            123
+          ]
+        },
+        {
+          "step": 28,
+          "spots": [
+            121
+          ]
+        },
+        {
+          "step": 30,
+          "spots": [
+            118
+          ]
+        },
+        {
+          "step": 41,
+          "spots": [
+            144
+          ]
+        },
+        {
+          "step": 45,
+          "spots": [
+            123
+          ]
+        },
+        {
+          "step": 51,
+          "spots": [
+            225,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "wall_ms": 19029.132,
+      "daily_types": 8,
+      "servings": 16,
+      "plan": [
+        [
+          -1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1,
+          1,
+          -10,
+          4,
+          3,
+          2,
+          3,
+          3,
+          2,
+          2,
+          3,
+          3,
+          2,
+          3,
+          2,
+          1,
+          1,
+          1,
+          1,
+          0
+        ],
+        [
+          2,
+          2,
+          -2,
+          2,
+          2,
+          1,
+          5,
+          5,
+          5,
+          0,
+          0,
+          0,
+          0,
+          5,
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          3,
+          2,
+          3,
+          3,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          4,
+          4,
+          -8
+        ],
+        [
+          -1,
+          4,
+          5,
+          5,
+          0,
+          0,
+          0,
+          0,
+          0,
+          5,
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          3,
+          4,
+          3,
+          3,
+          3,
+          -8,
+          -8
+        ],
+        [
+          -1,
+          2,
+          2,
+          2,
+          2,
+          1,
+          -1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          5,
+          5,
+          5,
+          5,
+          5,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4,
+          -3
+        ]
+      ],
+      "input_state": {
+        "day": 2,
+        "agents": [
+          {
+            "kind": 0,
+            "pos": 225,
+            "fuel": 17
+          },
+          {
+            "kind": 1,
+            "pos": 121,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 109,
+            "fuel": 17
+          },
+          {
+            "kind": 0,
+            "pos": 121,
+            "fuel": 32
+          }
+        ],
+        "others": [],
+        "traffics": [
+          {
+            "pos": 1,
+            "status": 0
+          },
+          {
+            "pos": 4,
+            "status": 0
+          },
+          {
+            "pos": 40,
+            "status": 1
+          },
+          {
+            "pos": 67,
+            "status": 0
+          },
+          {
+            "pos": 79,
+            "status": 0
+          },
+          {
+            "pos": 80,
+            "status": 0
+          },
+          {
+            "pos": 82,
+            "status": 0
+          },
+          {
+            "pos": 84,
+            "status": 0
+          },
+          {
+            "pos": 85,
+            "status": 0
+          },
+          {
+            "pos": 100,
+            "status": 0
+          },
+          {
+            "pos": 112,
+            "status": 0
+          },
+          {
+            "pos": 116,
+            "status": 0
+          },
+          {
+            "pos": 125,
+            "status": 0
+          },
+          {
+            "pos": 133,
+            "status": 2
+          },
+          {
+            "pos": 146,
+            "status": 1
+          },
+          {
+            "pos": 147,
+            "status": 1
+          },
+          {
+            "pos": 155,
+            "status": 0
+          },
+          {
+            "pos": 169,
+            "status": 0
+          },
+          {
+            "pos": 170,
+            "status": 1
+          },
+          {
+            "pos": 173,
+            "status": 0
+          },
+          {
+            "pos": 175,
+            "status": 0
+          },
+          {
+            "pos": 180,
+            "status": 0
+          },
+          {
+            "pos": 184,
+            "status": 1
+          },
+          {
+            "pos": 188,
+            "status": 0
+          },
+          {
+            "pos": 196,
+            "status": 0
+          },
+          {
+            "pos": 197,
+            "status": 0
+          },
+          {
+            "pos": 198,
+            "status": 0
+          },
+          {
+            "pos": 202,
+            "status": 0
+          },
+          {
+            "pos": 207,
+            "status": 0
+          },
+          {
+            "pos": 217,
+            "status": 0
+          },
+          {
+            "pos": 222,
+            "status": 0
+          },
+          {
+            "pos": 224,
+            "status": 0
+          },
+          {
+            "pos": 229,
+            "status": 0
+          },
+          {
+            "pos": 231,
+            "status": 0
+          },
+          {
+            "pos": 236,
+            "status": 0
+          },
+          {
+            "pos": 247,
+            "status": 0
+          },
+          {
+            "pos": 249,
+            "status": 0
+          },
+          {
+            "pos": 254,
+            "status": 0
+          }
+        ]
+      },
+      "ending_agents": [
+        {
+          "cell": 159,
+          "fuel": 14,
+          "type": 0
+        },
+        {
+          "cell": 225,
+          "fuel": 32,
+          "type": 1
+        },
+        {
+          "cell": 225,
+          "fuel": 32,
+          "type": 0
+        },
+        {
+          "cell": 225,
+          "fuel": 32,
+          "type": 0
+        }
+      ],
+      "diagnostics": {
+        "score": [
+          8,
+          8,
+          16
+        ],
+        "projected_final": [
+          8,
+          48,
+          94
+        ],
+        "seed_projected_servings": 94,
+        "warm_valid": true,
+        "expansions": 66,
+        "evaluated": 658,
+        "rejected_coverage_or_invalid": 224,
+        "duplicates": 23,
+        "sweeps": 25,
+        "updates": 1,
+        "peak_frontier": 53,
+        "safe_bound_prunes": 287,
+        "improvements": [
+          {
+            "ms": 1001,
+            "servings": 94
+          }
+        ],
+        "exhaust_budget": false,
+        "elapsed_ms": 19000
+      },
+      "acquisitions": [
+        {
+          "step": 1,
+          "spots": [
+            225,
+            109,
+            121
+          ]
+        },
+        {
+          "step": 5,
+          "spots": [
+            123
+          ]
+        },
+        {
+          "step": 6,
+          "spots": [
+            123
+          ]
+        },
+        {
+          "step": 10,
+          "spots": [
+            109
+          ]
+        },
+        {
+          "step": 11,
+          "spots": [
+            144
+          ]
+        },
+        {
+          "step": 23,
+          "spots": [
+            14
+          ]
+        },
+        {
+          "step": 27,
+          "spots": [
+            118
+          ]
+        },
+        {
+          "step": 28,
+          "spots": [
+            118
+          ]
+        },
+        {
+          "step": 29,
+          "spots": [
+            11
+          ]
+        },
+        {
+          "step": 44,
+          "spots": [
+            144
+          ]
+        },
+        {
+          "step": 54,
+          "spots": [
+            225
+          ]
+        },
+        {
+          "step": 62,
+          "spots": [
+            237
+          ]
+        },
+        {
+          "step": 67,
+          "spots": [
+            225
+          ]
+        },
+        {
+          "step": 70,
+          "spots": [
+            159
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "wall_ms": 7070.971,
+      "daily_types": 8,
+      "servings": 17,
+      "plan": [
+        [
+          -1,
+          5,
+          5,
+          5,
+          4,
+          5,
+          4,
+          5,
+          -3,
+          2,
+          3,
+          3,
+          2,
+          3,
+          2,
+          5,
+          0,
+          5,
+          0,
+          0,
+          5,
+          5,
+          -5,
+          0,
+          0,
+          5,
+          0,
+          1,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4,
+          0,
+          0,
+          0,
+          1,
+          0,
+          -2
+        ],
+        [
+          2,
+          2,
+          1,
+          1,
+          2,
+          2,
+          2,
+          1,
+          2,
+          5,
+          0,
+          0,
+          5,
+          0,
+          1,
+          4,
+          3,
+          2,
+          3,
+          3,
+          0,
+          0,
+          5,
+          0,
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          2,
+          3,
+          3,
+          3,
+          3,
+          3,
+          2,
+          1,
+          2
+        ],
+        [
+          -1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          3,
+          2,
+          2,
+          2,
+          1,
+          2,
+          1,
+          1,
+          -4,
+          1,
+          1,
+          1,
+          0,
+          1,
+          2,
+          2,
+          2,
+          1,
+          1,
+          2,
+          2,
+          2,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          -7,
+          2,
+          1,
+          2
+        ],
+        [
+          -1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          3,
+          2,
+          2,
+          2,
+          1,
+          2,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          2,
+          3,
+          3,
+          3,
+          4,
+          4,
+          1,
+          1,
+          -22,
+          3,
+          3,
+          2,
+          1,
+          2
+        ]
+      ],
+      "input_state": {
+        "day": 3,
+        "agents": [
+          {
+            "kind": 0,
+            "pos": 159,
+            "fuel": 14
+          },
+          {
+            "kind": 1,
+            "pos": 225,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 225,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 225,
+            "fuel": 32
+          }
+        ],
+        "others": [],
+        "traffics": [
+          {
+            "pos": 1,
+            "status": 0
+          },
+          {
+            "pos": 4,
+            "status": 0
+          },
+          {
+            "pos": 40,
+            "status": 2
+          },
+          {
+            "pos": 67,
+            "status": 0
+          },
+          {
+            "pos": 79,
+            "status": 0
+          },
+          {
+            "pos": 80,
+            "status": 0
+          },
+          {
+            "pos": 82,
+            "status": 0
+          },
+          {
+            "pos": 84,
+            "status": 0
+          },
+          {
+            "pos": 85,
+            "status": 0
+          },
+          {
+            "pos": 100,
+            "status": 0
+          },
+          {
+            "pos": 112,
+            "status": 0
+          },
+          {
+            "pos": 116,
+            "status": 0
+          },
+          {
+            "pos": 125,
+            "status": 1
+          },
+          {
+            "pos": 133,
+            "status": 2
+          },
+          {
+            "pos": 146,
+            "status": 2
+          },
+          {
+            "pos": 147,
+            "status": 2
+          },
+          {
+            "pos": 155,
+            "status": 0
+          },
+          {
+            "pos": 169,
+            "status": 0
+          },
+          {
+            "pos": 170,
+            "status": 0
+          },
+          {
+            "pos": 173,
+            "status": 0
+          },
+          {
+            "pos": 175,
+            "status": 0
+          },
+          {
+            "pos": 180,
+            "status": 0
+          },
+          {
+            "pos": 184,
+            "status": 2
+          },
+          {
+            "pos": 188,
+            "status": 0
+          },
+          {
+            "pos": 196,
+            "status": 0
+          },
+          {
+            "pos": 197,
+            "status": 0
+          },
+          {
+            "pos": 198,
+            "status": 0
+          },
+          {
+            "pos": 202,
+            "status": 0
+          },
+          {
+            "pos": 207,
+            "status": 0
+          },
+          {
+            "pos": 217,
+            "status": 0
+          },
+          {
+            "pos": 222,
+            "status": 0
+          },
+          {
+            "pos": 224,
+            "status": 0
+          },
+          {
+            "pos": 229,
+            "status": 0
+          },
+          {
+            "pos": 231,
+            "status": 0
+          },
+          {
+            "pos": 236,
+            "status": 0
+          },
+          {
+            "pos": 247,
+            "status": 0
+          },
+          {
+            "pos": 249,
+            "status": 0
+          },
+          {
+            "pos": 254,
+            "status": 0
+          }
+        ]
+      },
+      "ending_agents": [
+        {
+          "cell": 144,
+          "fuel": 18,
+          "type": 0
+        },
+        {
+          "cell": 109,
+          "fuel": 32,
+          "type": 1
+        },
+        {
+          "cell": 109,
+          "fuel": 32,
+          "type": 0
+        },
+        {
+          "cell": 109,
+          "fuel": 32,
+          "type": 0
+        }
+      ],
+      "diagnostics": {
+        "score": [
+          8,
+          8,
+          17
+        ],
+        "projected_final": [
+          8,
+          48,
+          94
+        ],
+        "seed_projected_servings": 94,
+        "warm_valid": true,
+        "expansions": 6,
+        "evaluated": 162,
+        "rejected_coverage_or_invalid": 90,
+        "duplicates": 0,
+        "sweeps": 7,
+        "updates": 1,
+        "peak_frontier": 3,
+        "safe_bound_prunes": 70,
+        "improvements": [
+          {
+            "ms": 1001,
+            "servings": 94
+          }
+        ],
+        "exhaust_budget": false,
+        "elapsed_ms": 7041
+      },
+      "acquisitions": [
+        {
+          "step": 1,
+          "spots": [
+            159,
+            225,
+            225
+          ]
+        },
+        {
+          "step": 11,
+          "spots": [
+            144,
+            144
+          ]
+        },
+        {
+          "step": 28,
+          "spots": [
+            237
+          ]
+        },
+        {
+          "step": 30,
+          "spots": [
+            118,
+            118
+          ]
+        },
+        {
+          "step": 54,
+          "spots": [
+            121
+          ]
+        },
+        {
+          "step": 56,
+          "spots": [
+            11
+          ]
+        },
+        {
+          "step": 62,
+          "spots": [
+            14
+          ]
+        },
+        {
+          "step": 77,
+          "spots": [
+            123
+          ]
+        },
+        {
+          "step": 78,
+          "spots": [
+            225
+          ]
+        },
+        {
+          "step": 84,
+          "spots": [
+            123
+          ]
+        },
+        {
+          "step": 88,
+          "spots": [
+            144
+          ]
+        },
+        {
+          "step": 90,
+          "spots": [
+            109,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "day": 4,
+      "wall_ms": 1133.802,
+      "daily_types": 8,
+      "servings": 19,
+      "plan": [
+        [
+          -1,
+          3,
+          4,
+          3,
+          3,
+          3,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          1,
+          1,
+          -2,
+          1,
+          1,
+          1,
+          0,
+          1,
+          2,
+          3,
+          3,
+          3,
+          3,
+          3,
+          2,
+          1,
+          2,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          -36
+        ],
+        [
+          -1,
+          5,
+          5,
+          5,
+          0,
+          -2,
+          0,
+          0,
+          0,
+          5,
+          4,
+          4,
+          4,
+          4,
+          3,
+          1,
+          1,
+          1,
+          0,
+          1,
+          4,
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4,
+          -4,
+          2,
+          2,
+          2,
+          1,
+          2,
+          2,
+          1,
+          1,
+          2,
+          2,
+          3,
+          3,
+          2,
+          3,
+          2,
+          -3
+        ],
+        [
+          -1,
+          5,
+          5,
+          4,
+          0,
+          0,
+          1,
+          1,
+          1,
+          1,
+          0,
+          5,
+          5,
+          4,
+          4,
+          5,
+          4,
+          -4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          3,
+          4,
+          3,
+          3,
+          3,
+          -36
+        ],
+        [
+          -1,
+          5,
+          5,
+          4,
+          5,
+          5,
+          1,
+          1,
+          0,
+          0,
+          0,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          3,
+          4,
+          3,
+          3,
+          3,
+          -8,
+          2,
+          2,
+          1,
+          1,
+          2,
+          2,
+          2,
+          1,
+          2,
+          1,
+          2,
+          2,
+          2,
+          2,
+          1,
+          2,
+          3,
+          4,
+          4,
+          4,
+          4,
+          -3
+        ]
+      ],
+      "input_state": {
+        "day": 4,
+        "agents": [
+          {
+            "kind": 0,
+            "pos": 144,
+            "fuel": 18
+          },
+          {
+            "kind": 1,
+            "pos": 109,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 109,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 109,
+            "fuel": 32
+          }
+        ],
+        "others": [],
+        "traffics": [
+          {
+            "pos": 1,
+            "status": 0
+          },
+          {
+            "pos": 4,
+            "status": 0
+          },
+          {
+            "pos": 40,
+            "status": 2
+          },
+          {
+            "pos": 67,
+            "status": 0
+          },
+          {
+            "pos": 79,
+            "status": 0
+          },
+          {
+            "pos": 80,
+            "status": 0
+          },
+          {
+            "pos": 82,
+            "status": 0
+          },
+          {
+            "pos": 84,
+            "status": 0
+          },
+          {
+            "pos": 85,
+            "status": 0
+          },
+          {
+            "pos": 100,
+            "status": 0
+          },
+          {
+            "pos": 112,
+            "status": 0
+          },
+          {
+            "pos": 116,
+            "status": 0
+          },
+          {
+            "pos": 125,
+            "status": 1
+          },
+          {
+            "pos": 133,
+            "status": 2
+          },
+          {
+            "pos": 146,
+            "status": 1
+          },
+          {
+            "pos": 147,
+            "status": 1
+          },
+          {
+            "pos": 155,
+            "status": 0
+          },
+          {
+            "pos": 169,
+            "status": 0
+          },
+          {
+            "pos": 170,
+            "status": 0
+          },
+          {
+            "pos": 173,
+            "status": 0
+          },
+          {
+            "pos": 175,
+            "status": 0
+          },
+          {
+            "pos": 180,
+            "status": 0
+          },
+          {
+            "pos": 184,
+            "status": 2
+          },
+          {
+            "pos": 188,
+            "status": 0
+          },
+          {
+            "pos": 196,
+            "status": 0
+          },
+          {
+            "pos": 197,
+            "status": 0
+          },
+          {
+            "pos": 198,
+            "status": 0
+          },
+          {
+            "pos": 202,
+            "status": 1
+          },
+          {
+            "pos": 207,
+            "status": 0
+          },
+          {
+            "pos": 217,
+            "status": 0
+          },
+          {
+            "pos": 222,
+            "status": 0
+          },
+          {
+            "pos": 224,
+            "status": 0
+          },
+          {
+            "pos": 229,
+            "status": 0
+          },
+          {
+            "pos": 231,
+            "status": 0
+          },
+          {
+            "pos": 236,
+            "status": 1
+          },
+          {
+            "pos": 247,
+            "status": 0
+          },
+          {
+            "pos": 249,
+            "status": 0
+          },
+          {
+            "pos": 254,
+            "status": 0
+          }
+        ]
+      },
+      "ending_agents": [
+        {
+          "cell": 14,
+          "fuel": 16,
+          "type": 0
+        },
+        {
+          "cell": 237,
+          "fuel": 32,
+          "type": 1
+        },
+        {
+          "cell": 225,
+          "fuel": 32,
+          "type": 0
+        },
+        {
+          "cell": 237,
+          "fuel": 32,
+          "type": 0
+        }
+      ],
+      "diagnostics": {
+        "score": [
+          8,
+          8,
+          19
+        ],
+        "projected_final": [
+          8,
+          48,
+          94
+        ],
+        "seed_projected_servings": 94,
+        "warm_valid": true,
+        "expansions": 0,
+        "evaluated": 4,
+        "rejected_coverage_or_invalid": 0,
+        "duplicates": 0,
+        "sweeps": 1,
+        "updates": 1,
+        "peak_frontier": 2,
+        "safe_bound_prunes": 3,
+        "improvements": [
+          {
+            "ms": 1001,
+            "servings": 94
+          }
+        ],
+        "exhaust_budget": false,
+        "elapsed_ms": 1105
+      },
+      "acquisitions": [
+        {
+          "step": 1,
+          "spots": [
+            144,
+            109,
+            109
+          ]
+        },
+        {
+          "step": 7,
+          "spots": [
+            123,
+            123
+          ]
+        },
+        {
+          "step": 11,
+          "spots": [
+            225,
+            121
+          ]
+        },
+        {
+          "step": 21,
+          "spots": [
+            11
+          ]
+        },
+        {
+          "step": 29,
+          "spots": [
+            118
+          ]
+        },
+        {
+          "step": 47,
+          "spots": [
+            118
+          ]
+        },
+        {
+          "step": 51,
+          "spots": [
+            144
+          ]
+        },
+        {
+          "step": 55,
+          "spots": [
+            123
+          ]
+        },
+        {
+          "step": 61,
+          "spots": [
+            109,
+            225
+          ]
+        },
+        {
+          "step": 63,
+          "spots": [
+            144
+          ]
+        },
+        {
+          "step": 73,
+          "spots": [
+            14,
+            225
+          ]
+        },
+        {
+          "step": 98,
+          "spots": [
+            159
+          ]
+        },
+        {
+          "step": 106,
+          "spots": [
+            237
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "wall_ms": 515.189,
+      "daily_types": 8,
+      "servings": 19,
+      "plan": [
+        [
+          5,
+          5,
+          5,
+          5,
+          5,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          3,
+          -1,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4,
+          0,
+          0,
+          0,
+          1,
+          0,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          2,
+          3,
+          3,
+          3,
+          3,
+          3,
+          2,
+          2,
+          1,
+          -26
+        ],
+        [
+          5,
+          0,
+          5,
+          0,
+          0,
+          5,
+          5,
+          0,
+          0,
+          5,
+          0,
+          1,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4,
+          0,
+          0,
+          0,
+          1,
+          0,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          2,
+          3,
+          3,
+          3,
+          3,
+          3,
+          2,
+          1,
+          2,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          -6,
+          -7
+        ],
+        [
+          -1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          2,
+          3,
+          3,
+          3,
+          4,
+          4,
+          2,
+          2,
+          0,
+          0,
+          -34,
+          3,
+          2,
+          2,
+          2,
+          -2,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          2,
+          2,
+          2,
+          -7
+        ],
+        [
+          -1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          5,
+          5,
+          5,
+          5,
+          4,
+          5,
+          4,
+          5,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          4,
+          4,
+          -9,
+          0,
+          0,
+          0,
+          1,
+          0,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          2,
+          3,
+          3,
+          3,
+          3,
+          3,
+          2,
+          1,
+          2,
+          -25
+        ]
+      ],
+      "input_state": {
+        "day": 5,
+        "agents": [
+          {
+            "kind": 0,
+            "pos": 14,
+            "fuel": 16
+          },
+          {
+            "kind": 1,
+            "pos": 237,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 225,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 237,
+            "fuel": 32
+          }
+        ],
+        "others": [],
+        "traffics": [
+          {
+            "pos": 1,
+            "status": 0
+          },
+          {
+            "pos": 4,
+            "status": 0
+          },
+          {
+            "pos": 40,
+            "status": 2
+          },
+          {
+            "pos": 67,
+            "status": 0
+          },
+          {
+            "pos": 79,
+            "status": 0
+          },
+          {
+            "pos": 80,
+            "status": 0
+          },
+          {
+            "pos": 82,
+            "status": 0
+          },
+          {
+            "pos": 84,
+            "status": 0
+          },
+          {
+            "pos": 85,
+            "status": 0
+          },
+          {
+            "pos": 100,
+            "status": 0
+          },
+          {
+            "pos": 112,
+            "status": 0
+          },
+          {
+            "pos": 116,
+            "status": 0
+          },
+          {
+            "pos": 125,
+            "status": 0
+          },
+          {
+            "pos": 133,
+            "status": 2
+          },
+          {
+            "pos": 146,
+            "status": 1
+          },
+          {
+            "pos": 147,
+            "status": 1
+          },
+          {
+            "pos": 155,
+            "status": 0
+          },
+          {
+            "pos": 169,
+            "status": 0
+          },
+          {
+            "pos": 170,
+            "status": 0
+          },
+          {
+            "pos": 173,
+            "status": 0
+          },
+          {
+            "pos": 175,
+            "status": 0
+          },
+          {
+            "pos": 180,
+            "status": 0
+          },
+          {
+            "pos": 184,
+            "status": 2
+          },
+          {
+            "pos": 188,
+            "status": 0
+          },
+          {
+            "pos": 196,
+            "status": 0
+          },
+          {
+            "pos": 197,
+            "status": 0
+          },
+          {
+            "pos": 198,
+            "status": 0
+          },
+          {
+            "pos": 202,
+            "status": 1
+          },
+          {
+            "pos": 207,
+            "status": 0
+          },
+          {
+            "pos": 217,
+            "status": 0
+          },
+          {
+            "pos": 222,
+            "status": 0
+          },
+          {
+            "pos": 224,
+            "status": 0
+          },
+          {
+            "pos": 229,
+            "status": 0
+          },
+          {
+            "pos": 231,
+            "status": 0
+          },
+          {
+            "pos": 236,
+            "status": 1
+          },
+          {
+            "pos": 247,
+            "status": 0
+          },
+          {
+            "pos": 249,
+            "status": 0
+          },
+          {
+            "pos": 254,
+            "status": 0
+          }
+        ]
+      },
+      "ending_agents": [
+        {
+          "cell": 109,
+          "fuel": 32,
+          "type": 0
+        },
+        {
+          "cell": 14,
+          "fuel": 32,
+          "type": 1
+        },
+        {
+          "cell": 14,
+          "fuel": 32,
+          "type": 0
+        },
+        {
+          "cell": 109,
+          "fuel": 32,
+          "type": 0
+        }
+      ],
+      "diagnostics": {
+        "score": [
+          8,
+          8,
+          19
+        ],
+        "projected_final": [
+          8,
+          48,
+          94
+        ],
+        "seed_projected_servings": 94,
+        "warm_valid": true,
+        "expansions": 0,
+        "evaluated": 2,
+        "rejected_coverage_or_invalid": 0,
+        "duplicates": 0,
+        "sweeps": 1,
+        "updates": 1,
+        "peak_frontier": 1,
+        "safe_bound_prunes": 1,
+        "improvements": [
+          {
+            "ms": 1001,
+            "servings": 94
+          }
+        ],
+        "exhaust_budget": false,
+        "elapsed_ms": 505
+      },
+      "acquisitions": [
+        {
+          "step": 1,
+          "spots": [
+            14,
+            225,
+            237
+          ]
+        },
+        {
+          "step": 6,
+          "spots": [
+            11
+          ]
+        },
+        {
+          "step": 9,
+          "spots": [
+            159
+          ]
+        },
+        {
+          "step": 11,
+          "spots": [
+            144
+          ]
+        },
+        {
+          "step": 27,
+          "spots": [
+            118
+          ]
+        },
+        {
+          "step": 28,
+          "spots": [
+            118
+          ]
+        },
+        {
+          "step": 38,
+          "spots": [
+            225
+          ]
+        },
+        {
+          "step": 47,
+          "spots": [
+            225
+          ]
+        },
+        {
+          "step": 51,
+          "spots": [
+            121
+          ]
+        },
+        {
+          "step": 55,
+          "spots": [
+            123
+          ]
+        },
+        {
+          "step": 57,
+          "spots": [
+            144,
+            144
+          ]
+        },
+        {
+          "step": 97,
+          "spots": [
+            123,
+            123
+          ]
+        },
+        {
+          "step": 101,
+          "spots": [
+            109
+          ]
+        },
+        {
+          "step": 102,
+          "spots": [
+            109
+          ]
+        },
+        {
+          "step": 103,
+          "spots": [
+            109
+          ]
+        }
+      ]
+    }
+  ],
+  "score": [
+    8,
+    48,
+    94
+  ],
+  "valid": true,
+  "wall_ms": 67376.785,
+  "deadline_pass": false,
+  "verification": {
+    "score": [
+      8,
+      48,
+      94
+    ],
+    "daily_types": [
+      8,
+      8,
+      8,
+      8,
+      8,
+      8
+    ],
+    "validator": "unchanged bin/hexudon.exe trace"
+  }
+}

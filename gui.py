@@ -12,6 +12,7 @@ import json
 import math
 import os
 import queue
+import re
 import ssl
 import subprocess
 import sys
@@ -386,7 +387,8 @@ def normalize_agents(raw_agents, cfg_agents, roles, fuel_limit):
     return built_agents
 
 
-def build_procon26_payload(map_config, day_info, day_num, raw_status=None):
+def build_procon26_payload(map_config, day_info, day_num, raw_status=None,
+                           runner_context=None, time_limit_ms=None):
     """Tạo payload chuẩn 100% cho PROCON26_RUNNER."""
     normalize_map_config(map_config)
     road_cells = get_road_cells(map_config)
@@ -430,12 +432,186 @@ def build_procon26_payload(map_config, day_info, day_num, raw_status=None):
         else:
             stock_list.append(1)
             
-    return {
+    payload = {
         "op": "plan",
         "config": map_config,
         "state": state,
         "stock": stock_list
     }
+    if runner_context is not None:
+        payload["history"] = runner_context.get("history", {
+            "distinct_brands": [], "submitted_actions": [],
+            "cumulative_daily_types": 0, "total_servings": 0,
+        })
+        planner_state = runner_context.get("planner_state")
+        if planner_state is not None:
+            payload["planner_state"] = planner_state
+    if time_limit_ms is not None:
+        requested = max(1, min(60000, int(time_limit_ms)))
+        payload["search"] = {
+            "timeLimitMs": requested,
+            "randomSeed": 1,
+            "sliceMs": 1000 if requested >= 20000 else 250,
+            "attempts": 32 if requested >= 20000 else 6,
+            "exhaustBudget": requested >= 20000,
+        }
+    return payload
+
+
+def new_runner_context():
+    return {
+        "history": {
+            "distinct_brands": [], "submitted_actions": [],
+            "cumulative_daily_types": 0, "total_servings": 0,
+        },
+        "planner_state": None,
+        "servings_by_day": [],
+        "pending": None,
+    }
+
+
+def policy_uses_runner_context(policy):
+    return policy == "procon26" or policy == "auto_race_all" or policy in CUSTOM_RUNNERS
+
+
+def read_server_day(status, default=None):
+    """Read the one-based live day across API response naming variants."""
+    if not isinstance(status, dict):
+        return default
+    for field in ("currentDay", "current_day", "current-day"):
+        value = status.get(field)
+        if type(value) is int and value >= 1:
+            return value
+        if isinstance(value, str) and value.isdigit() and int(value) >= 1:
+            return int(value)
+    return default
+
+
+def infer_server_day(status, map_config, default=None):
+    """Use cumulative daily-type score when the day field is missing/stale."""
+    reported = read_server_day(status)
+    brand_count = len({spot.get("brand") for spot in map_config.get("spots", [])
+                       if isinstance(spot, dict) and "brand" in spot})
+    total_days = len(map_config.get("daySteps", []))
+    candidates = []
+    stack = [status] if isinstance(status, dict) else []
+    score_fields = {
+        "cumulative_daily_types", "cumulativeDailyTypes",
+        "total_udon_daily_types", "totalUdonDailyTypes",
+    }
+    while stack:
+        item = stack.pop()
+        for key, value in item.items():
+            if key in score_fields and type(value) is int:
+                candidates.append(value)
+            elif isinstance(value, dict):
+                stack.append(value)
+    inferred = None
+    for score in candidates:
+        if brand_count and score >= 0 and score % brand_count == 0:
+            day = score // brand_count + 1
+            if not total_days or day <= total_days:
+                inferred = max(inferred or 1, day)
+    values = [value for value in (reported, inferred, default) if value is not None]
+    return max(values) if values else None
+
+
+def resume_runner_day(status, runner_context=None):
+    # Server day is authoritative. Runner history must be reconciled to it,
+    # never used to advance it: /answer revision is not a day counter.
+    return read_server_day(status, 1)
+
+
+def recover_runner_context(map_config, server_day):
+    """Create neutral past entries when GUI restarts during an active match.
+
+    The v2 runner treats these deliberately over-horizon entries as unavailable
+    traffic history and continues from the authoritative current server state.
+    """
+    context = new_runner_context()
+    past_days = max(0, int(server_day) - 1)
+    agent_count = len(map_config.get("agents", []))
+    day_steps = map_config.get("daySteps", [])
+    placeholders = []
+    for day in range(past_days):
+        steps = int(day_steps[day]) if day < len(day_steps) else 1
+        placeholders.append([[-(max(1, steps) + 1)] for _ in range(agent_count)])
+    brands = sorted({int(spot["brand"]) for spot in map_config.get("spots", [])
+                     if isinstance(spot, dict) and "brand" in spot})
+    context["history"] = {
+        "distinct_brands": brands if past_days else [],
+        "submitted_actions": placeholders,
+        "cumulative_daily_types": len(brands) * past_days,
+        "total_servings": 0,
+    }
+    context["servings_by_day"] = [0] * past_days
+    context["recovered"] = bool(past_days)
+    return context
+
+
+def commit_runner_day(runner_context, map_config, plan, planner_state, servings):
+    """Commit a day only after /status advances beyond that day."""
+    history = runner_context.setdefault("history", new_runner_context()["history"])
+    history.setdefault("submitted_actions", []).append(plan)
+    brands = sorted({int(spot["brand"]) for spot in map_config.get("spots", [])
+                     if isinstance(spot, dict) and "brand" in spot})
+    history["distinct_brands"] = brands
+    history["cumulative_daily_types"] = len(brands) * len(history["submitted_actions"])
+    history["total_servings"] = int(history.get("total_servings", 0)) + max(0, int(servings or 0))
+    runner_context.setdefault("servings_by_day", []).append(max(0, int(servings or 0)))
+    runner_context["planner_state"] = planner_state
+
+
+def stage_runner_day(runner_context, day, plan, planner_state, servings):
+    """Store/replace the accepted answer for the still-current server day."""
+    runner_context["pending"] = {
+        "day": int(day), "plan": plan, "planner_state": planner_state,
+        "servings": max(0, int(servings or 0)),
+    }
+
+
+def reconcile_runner_context(runner_context, map_config, server_day):
+    """Align history to authoritative one-based server day."""
+    expected = max(0, int(server_day) - 1)
+    history = runner_context.setdefault("history", new_runner_context()["history"])
+    actions = history.setdefault("submitted_actions", [])
+    servings = runner_context.setdefault("servings_by_day", [])
+    pending = runner_context.get("pending")
+    events = []
+    if isinstance(pending, dict) and pending.get("day", 0) < server_day:
+        if len(actions) == pending["day"] - 1:
+            commit_runner_day(runner_context, map_config, pending["plan"],
+                              pending.get("planner_state"), pending.get("servings", 0))
+            actions = history["submitted_actions"]
+            servings = runner_context["servings_by_day"]
+            events.append(f"committed pending day {pending['day']}")
+        runner_context["pending"] = None
+    elif isinstance(pending, dict) and pending.get("day", 0) > server_day:
+        runner_context["pending"] = None
+        events.append("discarded future pending answer")
+    if len(actions) > expected:
+        del actions[expected:]
+        del servings[expected:]
+        runner_context["planner_state"] = None
+        runner_context["pending"] = None
+        events.append(f"trimmed polluted history to {expected} completed days")
+    if len(actions) < expected:
+        missing = expected - len(actions)
+        agent_count = len(map_config.get("agents", []))
+        day_steps = map_config.get("daySteps", [])
+        for day in range(len(actions), expected):
+            steps = int(day_steps[day]) if day < len(day_steps) else 1
+            actions.append([[-(max(1, steps) + 1)] for _ in range(agent_count)])
+            servings.append(0)
+        runner_context["planner_state"] = None
+        events.append(f"recovered {missing} past days with neutral traffic")
+    brands = sorted({int(spot["brand"]) for spot in map_config.get("spots", [])
+                     if isinstance(spot, dict) and "brand" in spot})
+    history["distinct_brands"] = brands if expected else []
+    history["cumulative_daily_types"] = len(brands) * expected
+    history["total_servings"] = sum(servings[:expected])
+    runner_context["servings_by_day"] = servings[:expected]
+    return events
 
 
 def read_custom_runners():
@@ -532,7 +708,7 @@ def stop_http_bot(process):
         process.wait(timeout=5)
 
 
-def run_runner(payload, timeout, executable=None):
+def run_runner(payload, timeout, executable=None, return_response=False):
     executable = (executable if executable is not None else PROCON26_RUNNER).resolve()
     if not executable.is_file() or executable.suffix.lower() != ".exe":
         raise RuntimeError(f"Runner .exe not found: {executable}. Select one in Kho Solver.")
@@ -544,7 +720,15 @@ def run_runner(payload, timeout, executable=None):
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise RuntimeError(f"Cannot run {executable}: {exc}") from exc
     if result.returncode != 0:
-        raise RuntimeError(f"Runner exit code {result.returncode}: {result.stderr.strip()[:1000]}")
+        detail = result.stderr.strip()
+        try:
+            failed = json.loads(result.stdout)
+            if isinstance(failed, dict) and failed.get("error"):
+                detail = str(failed["error"])
+        except (TypeError, ValueError):
+            if not detail:
+                detail = result.stdout.strip()
+        raise RuntimeError(f"Runner exit code {result.returncode}: {detail[:1000] or 'no error detail'}")
     try:
         response = json.loads(result.stdout)
     except ValueError as exc:
@@ -562,7 +746,7 @@ def run_runner(payload, timeout, executable=None):
             raise RuntimeError("Runner roles must be integer 0/1.")
     elif any(not isinstance(route, list) or any(type(action) is not int for action in route) for route in value):
         raise RuntimeError("Runner plan must be an array of integer arrays.")
-    return value
+    return response if return_response else value
 
 
 def validate_roles(roles, count):
@@ -720,9 +904,11 @@ def check_plan_score(map_config, day_info, actions):
     return {"valid": False, "servings": -1}
 
 
-def solve_auto_race(map_config, day_info, roles, time_limit_ms=3000, log_fn=None, include_all=False, day_num=1, raw_status=None, day_budget_sec=None):
+def solve_auto_race(map_config, day_info, roles, time_limit_ms=3000, log_fn=None, include_all=False, day_num=1, raw_status=None, day_budget_sec=None, runner_context=None):
     """Chạy song song các solver, đo điểm số thực tế bằng check và nộp phương án cao điểm nhất."""
     normalize_map_config(map_config)
+    brand_count = len({spot.get("brand") for spot in map_config.get("spots", [])
+                       if isinstance(spot, dict) and "brand" in spot})
     if day_budget_sec and day_budget_sec > 0:
         cand_timeout = max(2, int(day_budget_sec - 2))
     else:
@@ -732,8 +918,41 @@ def solve_auto_race(map_config, day_info, roles, time_limit_ms=3000, log_fn=None
         t0 = time.time()
         try:
             if pol == "procon26" or pol in CUSTOM_RUNNERS:
-                payload = build_procon26_payload(map_config, day_info, day_num, raw_status)
-                plan = run_runner(payload, timeout=cand_timeout, executable=CUSTOM_RUNNERS.get(pol))
+                candidate_context = None
+                if runner_context is not None:
+                    candidate_context = {"history": runner_context["history"]}
+                    saved = runner_context.get("planner_state")
+                    if isinstance(saved, dict) and saved.get("candidate") == pol:
+                        candidate_context["planner_state"] = saved.get("state")
+                payload = build_procon26_payload(
+                    map_config, day_info, day_num, raw_status,
+                    candidate_context, time_limit_ms,
+                )
+                for _attempt in range(3):
+                    try:
+                        response = run_runner(
+                            payload, timeout=cand_timeout,
+                            executable=CUSTOM_RUNNERS.get(pol), return_response=True,
+                        )
+                        break
+                    except RuntimeError as exc:
+                        detail = str(exc)
+                        limit = re.search(r"timeLimitMs must be 1\.\.(\d+)", detail)
+                        if limit and payload.get("search", {}).get("timeLimitMs", 0) > int(limit.group(1)):
+                            payload["search"]["timeLimitMs"] = int(limit.group(1))
+                            if log_fn:
+                                log_fn(f"  {pol}: giới hạn nội bộ {limit.group(1)}ms; tự giảm riêng runner này.", "WARN")
+                            continue
+                        if "history cannot replay" in detail and "history" in payload:
+                            payload.pop("history", None)
+                            payload.pop("planner_state", None)
+                            if log_fn:
+                                log_fn(f"  {pol}: artifact cũ không replay được lịch sử; chạy lại từ state hiện tại.", "WARN")
+                            continue
+                        raise
+                else:
+                    raise RuntimeError("Runner compatibility retry exhausted")
+                plan = response["plan"]
             else:
                 search_cfg = {"timeLimitMs": time_limit_ms, "time_limit_ms": time_limit_ms}
                 if pol == "mlns":
@@ -747,14 +966,15 @@ def solve_auto_race(map_config, day_info, roles, time_limit_ms=3000, log_fn=None
                     cwd=ROOT
                 )
                 if p.returncode != 0:
-                    return pol, None, {"valid": False, "servings": -1}, time.time() - t0
+                    return pol, None, {"valid": False, "servings": -1, "error": p.stderr.strip()}, time.time() - t0, None
                 plan = json.loads(p.stdout)
 
             el = time.time() - t0
             score = check_plan_score(map_config, day_info, plan)
-            return pol, plan, score, el
-        except Exception:
-            return pol, None, {"valid": False, "servings": -1}, time.time() - t0
+            planner_state = response.get("planner_state") if pol == "procon26" or pol in CUSTOM_RUNNERS else None
+            return pol, plan, score, el, planner_state
+        except Exception as exc:
+            return pol, None, {"valid": False, "servings": -1, "error": str(exc)}, time.time() - t0, None
 
     if include_all:
         candidates = ["aco_ls", "alns", "procon26", "local_search", "greedy", *(name for name in CUSTOM_RUNNERS if not name.startswith("HTTP: "))]
@@ -781,18 +1001,23 @@ def solve_auto_race(map_config, day_info, roles, time_limit_ms=3000, log_fn=None
         "mlns": "MLNS"
     }
 
-    for pol, plan, sc, el in results:
+    for pol, plan, sc, el, _planner_state in results:
         pol_name = name_map.get(pol, pol)
         if sc.get("valid"):
             if log_fn:
-                log_fn(f"  🏎️ {pol_name:<11}: {sc.get('servings', 0)} bát mì | {sc.get('distinct_types', 0)}/4 loại ({el:.2f}s)", "INFO")
+                log_fn(f"  🏎️ {pol_name:<11}: {sc.get('servings', 0)} bát mì | {sc.get('distinct_types', 0)}/{brand_count} loại ({el:.2f}s)", "INFO")
         else:
             if log_fn:
-                log_fn(f"  ❌ {pol_name:<11}: Kế hoạch không hợp lệ hoặc quá giờ ({el:.2f}s)", "WARN")
+                detail = sc.get("error") or "Kế hoạch không hợp lệ"
+                log_fn(f"  ❌ {pol_name:<11}: {detail} ({el:.2f}s)", "WARN")
 
     valid_results = [r for r in results if r[1] is not None and r[2].get("valid", False)]
     if valid_results:
         winner = max(valid_results, key=lambda x: (x[2].get("daily_types", 0), x[2].get("servings", 0), -x[3]))
+        if runner_context is not None:
+            runner_context["pending_planner_state"] = {
+                "candidate": winner[0], "state": winner[4],
+            }
         win_name = name_map.get(winner[0], winner[0])
         if log_fn:
             log_fn(f"  🏆 CHIẾN THẮNG: {win_name} ({winner[2].get('servings', 0)} bát mì) -> ĐÃ CHỌN ĐỂ NỘP LÊN SERVER!", "SUCCESS")
@@ -812,20 +1037,40 @@ def solve_auto_race(map_config, day_info, roles, time_limit_ms=3000, log_fn=None
     return [[-int(steps)] for _ in range(num_agents)]
 
 
-def solve_plan(policy, map_config, day_info, roles, day_num=1, raw_status=None, time_limit_ms=3000, log_fn=None, day_budget_sec=None):
+def solve_plan(policy, map_config, day_info, roles, day_num=1, raw_status=None,
+               time_limit_ms=3000, log_fn=None, day_budget_sec=None,
+               runner_context=None):
     if policy.startswith("HTTP: "):
         raise ValueError("Bot HTTP tự giải và nộp bài; không dùng được như runner JSON.")
     normalize_map_config(map_config)
     if policy == "procon26" or policy in CUSTOM_RUNNERS:
-        payload = build_procon26_payload(map_config, day_info, day_num, raw_status)
+        payload = build_procon26_payload(map_config, day_info, day_num, raw_status,
+                                         runner_context, time_limit_ms)
         pr_timeout = max(2, int(day_budget_sec - 2)) if (day_budget_sec and day_budget_sec > 0) else 30
-        return run_runner(payload, timeout=pr_timeout, executable=CUSTOM_RUNNERS.get(policy))
+        response = run_runner(payload, timeout=pr_timeout,
+                              executable=CUSTOM_RUNNERS.get(policy),
+                              return_response=True)
+        diagnostics = response.get("diagnostics")
+        if log_fn and isinstance(diagnostics, dict):
+            projected = diagnostics.get("projected_final")
+            log_fn(
+                "Runner diagnostics: "
+                f"elapsed={diagnostics.get('elapsed_ms', '?')}ms, "
+                f"expansions={diagnostics.get('expansions', '?')}, "
+                f"evaluated={diagnostics.get('evaluated', '?')}, "
+                f"bound_prunes={diagnostics.get('safe_bound_prunes', '?')}, "
+                f"projected={projected}.",
+                "INFO",
+            )
+        if runner_context is not None:
+            runner_context["pending_planner_state"] = response.get("planner_state")
+        return response["plan"]
 
     if policy == "auto_race":
         return solve_auto_race(map_config, day_info, roles, time_limit_ms=time_limit_ms, log_fn=log_fn, include_all=False, day_num=day_num, raw_status=raw_status, day_budget_sec=day_budget_sec)
 
     if policy == "auto_race_all":
-        return solve_auto_race(map_config, day_info, roles, time_limit_ms=time_limit_ms, log_fn=log_fn, include_all=True, day_num=day_num, raw_status=raw_status, day_budget_sec=day_budget_sec)
+        return solve_auto_race(map_config, day_info, roles, time_limit_ms=time_limit_ms, log_fn=log_fn, include_all=True, day_num=day_num, raw_status=raw_status, day_budget_sec=day_budget_sec, runner_context=runner_context)
 
     # Standard hex policy
     if day_budget_sec and day_budget_sec > 0:
@@ -905,6 +1150,9 @@ class HexControlCenter(tk.Tk):
         self.role_results = queue.Queue()
         self.cached_map_config = None
         self.current_roles = [1, 0, 0, 0, 0, 0]
+        # Continuity for stateless JSON runner processes. Step mode may invoke
+        # a fresh process per day, but v2 still needs accepted history/state.
+        self.runner_sessions = {}
 
         try:
             CUSTOM_RUNNERS.update(read_custom_runners())
@@ -1045,7 +1293,15 @@ class HexControlCenter(tk.Tk):
         ttk.Button(solver_buttons, text="Xóa solver", command=self.delete_runner).pack(side=tk.LEFT, padx=(4, 0))
 
         ttk.Label(row2, text="Thời gian giải/ngày:").grid(row=2, column=0, sticky=tk.W, padx=4, pady=4)
-        self.cbo_timelimit = ttk.Combobox(row2, values=["1500ms (1.5s - Tối ưu tốc độ)", "3000ms (3.0s - Tiêu chuẩn)", "5000ms (5.0s - Chuyên sâu)", "8000ms (8.0s - Cực sâu)"], width=30, state="readonly")
+        self.cbo_timelimit = ttk.Combobox(row2, values=[
+            "1500ms (1.5s - Tối ưu tốc độ)",
+            "3000ms (3.0s - Tiêu chuẩn)",
+            "5000ms (5.0s - Chuyên sâu)",
+            "8000ms (8.0s - Cực sâu)",
+            "20000ms (20s - Chokudai)",
+            "40000ms (40s - Chokudai sâu)",
+            "60000ms (60s - Tối đa)",
+        ], width=30, state="readonly")
         self.cbo_timelimit.grid(row=2, column=1, sticky=tk.W, padx=4, pady=4)
         self.cbo_timelimit.current(1)
 
@@ -1591,7 +1847,24 @@ class HexControlCenter(tk.Tk):
 
             # BƯỚC 1: Lấy status ban đầu để xác định ngày hiện tại
             status = self.api.get_game_status(match_id, token)
-            curr_day = status.get("currentDay", 1)
+            reported_day = infer_server_day(status, map_config)
+            existing_context = None
+            if policy_uses_runner_context(policy):
+                session_key = (str(match_id), str(policy))
+                existing_context = self.runner_sessions.get(session_key)
+                if existing_context is None and reported_day and reported_day > 1:
+                    existing_context = recover_runner_context(map_config, reported_day)
+                    self.runner_sessions[session_key] = existing_context
+                    self.log(
+                        f"Khôi phục runner ở Ngày {reported_day}: không có action lịch sử sau khi mở lại GUI; "
+                        "dùng traffic quá khứ trung tính và trạng thái hiện tại từ server.", "WARN"
+                    )
+                if existing_context is not None:
+                    for event in reconcile_runner_context(existing_context, map_config, reported_day or 1):
+                        self.log(f"Runner session: {event}.", "WARN")
+            curr_day = reported_day or 1
+            if reported_day is None:
+                self.log("/status không có trường ngày; dùng Ngày 1 và không tự tăng theo answer revision.", "WARN")
 
             # Chọn vai trò xe
             self.log("Đang kiểm tra và phân bổ vai trò xe...", "INFO")
@@ -1615,12 +1888,15 @@ class HexControlCenter(tk.Tk):
                 # Đồng bộ hóa chính xác nhịp ngày với Server (chờ đến khi server thực sự chuyển sang target_day)
                 day_st = None
                 poll_count = 0
-                max_polls = 120  # Chờ tối đa 120s cho mỗi ngày (server thường đếm ngược 45s - 60s)
+                # A resumed runner may already have answers queued ahead of the
+                # server clock. Wait through every remaining day boundary; do
+                # not call the solver with an older state after timeout.
+                max_polls = max(120, int(sum(cfg_day_seconds[:max(0, target_day - 1)]) + 30))
 
                 while not self.stop_requested and poll_count < max_polls:
                     try:
                         st = self.api.get_game_status(match_id, token)
-                        cur = st.get("currentDay", st.get("current_day"))
+                        cur = read_server_day(st)
                         m_status = st.get("status", "")
                         if m_status == "finished":
                             self.log("Server thông báo trận đấu đã hoàn thành!", "SUCCESS")
@@ -1646,14 +1922,20 @@ class HexControlCenter(tk.Tk):
                     return target_day, True
 
                 if not day_st:
+                    latest = None
                     try:
-                        day_st = self.api.get_game_status(match_id, token)
+                        latest = self.api.get_game_status(match_id, token)
                     except Exception as e_st:
                         self.log(f"Lỗi đọc status từ server: {e_st}", "ERROR")
-                        day_st = {}
+                    latest_day = read_server_day(latest)
+                    raise TimeoutError(
+                        f"Server chưa mở Ngày {target_day} sau {max_polls}s "
+                        f"(ngày server hiện tại: {latest_day or 'không xác định'}). "
+                        "GUI không gọi solver và không nộp state sai ngày; hãy bấm chạy lại khi server chuyển ngày."
+                    )
 
                 # Lấy số bước chính xác theo ngày hiện tại từ server hoặc map config
-                cur_server_day = day_st.get("currentDay", target_day)
+                cur_server_day = read_server_day(day_st, target_day)
                 cur_day_idx = cur_server_day - 1
                 server_steps = day_st.get("stepsCount")
                 if server_steps and isinstance(server_steps, int) and server_steps > 0:
@@ -1663,10 +1945,25 @@ class HexControlCenter(tk.Tk):
 
                 # Tự động điều chỉnh thời gian giải an toàn theo cấu hình daySeconds của map
                 day_sec = cfg_day_seconds[cur_day_idx] if cur_day_idx < len(cfg_day_seconds) else 45.0
-                safe_budget_ms = max(1000, int((day_sec - 2.5) * 1000))
+                # Use a stable per-day search allowance. A five-second reserve
+                # absorbs process startup, JSON, validation and HTTP submit.
+                safe_budget_ms = max(1000, int((day_sec - 5.0) * 1000))
                 effective_time_limit_ms = min(time_limit_ms, safe_budget_ms)
+                raw_ends_at = day_st.get("endsAt", day_st.get("ends_at"))
+                deadline_budget_ms = None
+                if isinstance(raw_ends_at, (int, float)) and not isinstance(raw_ends_at, bool):
+                    ends_at_seconds = float(raw_ends_at)
+                    if ends_at_seconds > 100_000_000_000:
+                        ends_at_seconds /= 1000.0
+                    deadline_budget_ms = max(1, int((ends_at_seconds - time.time() - 1.0) * 1000))
+                    effective_time_limit_ms = min(effective_time_limit_ms, deadline_budget_ms)
                 if effective_time_limit_ms < time_limit_ms:
-                    self.log(f"⚡ Map có nhịp ngày chỉ {day_sec}s. Tự động ép time limit từ {time_limit_ms}ms xuống {effective_time_limit_ms}ms để nộp bài trước hạn chót!", "WARN")
+                    reason = f"daySeconds={day_sec}s"
+                    if deadline_budget_ms is not None:
+                        reason += f", endsAt còn khoảng {max(0, deadline_budget_ms) / 1000:.2f}s"
+                    self.log(f"⚡ Ngân sách yêu cầu {time_limit_ms}ms; ngân sách thực tế {effective_time_limit_ms}ms ({reason}) để nộp trước hạn.", "WARN")
+                else:
+                    self.log(f"Ngân sách runner thực tế: {effective_time_limit_ms}ms.", "INFO")
 
                 self.lbl_status_day.config(text=f"Trạng thái: Đang giải Ngày {cur_server_day}/{total_days} ({steps} bước | Giới hạn: {effective_time_limit_ms}ms)")
 
@@ -1688,15 +1985,44 @@ class HexControlCenter(tk.Tk):
                     "traffics": norm_traffics
                 }
 
+                runner_context = None
+                if policy_uses_runner_context(policy):
+                    session_key = (str(match_id), str(policy))
+                    runner_context = self.runner_sessions.setdefault(session_key, new_runner_context())
+                    for event in reconcile_runner_context(runner_context, map_config, cur_server_day):
+                        self.log(f"Runner session: {event}.", "WARN")
+                    committed_days = len(runner_context["history"]["submitted_actions"])
+                    if committed_days != cur_day_idx:
+                        raise RuntimeError(
+                            f"Runner history has {committed_days} committed days but server is at "
+                            f"day {cur_server_day}. Keep this GUI open for the whole match; "
+                            "accepted actions cannot be reconstructed from /status."
+                        )
+
                 t0 = time.time()
-                plan = solve_plan(policy, map_config, day_info, roles, day_num=cur_server_day, raw_status=day_st, time_limit_ms=effective_time_limit_ms, log_fn=self.log, day_budget_sec=day_sec)
+                plan = solve_plan(
+                    policy, map_config, day_info, roles, day_num=cur_server_day,
+                    raw_status=day_st, time_limit_ms=effective_time_limit_ms,
+                    log_fn=self.log, day_budget_sec=day_sec,
+                    runner_context=runner_context,
+                )
                 elapsed = time.time() - t0
                 self.log(f"Đã giải xong trong {elapsed:.2f}s! Đang nộp bài...", "SUCCESS")
 
+                local_score = check_plan_score(map_config, day_info, plan)
                 ans_res = self.api.submit_actions(match_id, token, plan)
-                if isinstance(ans_res, dict) and ans_res.get("valid") is False:
+                rejected = isinstance(ans_res, dict) and any(
+                    ans_res.get(field) is False for field in ("valid", "ok", "success")
+                )
+                if rejected:
                     self.log(f"❌ Server phản hồi lỗi: {ans_res.get('error', ans_res)}", "ERROR")
                 else:
+                    if runner_context is not None:
+                        stage_runner_day(
+                            runner_context, cur_server_day, plan,
+                            runner_context.pop("pending_planner_state", None),
+                            local_score.get("servings", 0) if local_score.get("valid") else 0,
+                        )
                     self.log(f"✅ Server ghi nhận nộp bài Ngày {cur_server_day} thành công: {ans_res}", "SUCCESS")
 
                 is_match_over = (cur_server_day >= total_days)
@@ -1705,9 +2031,13 @@ class HexControlCenter(tk.Tk):
             # BƯỚC 2: Tiến hành giải theo chế độ đã chọn
             if mode == "step":
                 solve_and_submit_day(curr_day)
-                self.lbl_status_day.config(text=f"Trạng thái: Đã hoàn tất nộp Ngày {curr_day}! Sẵn sàng.")
-                self.log(f"🎯 ĐÃ HOÀN TẤT NỘP BÀI NGÀY {curr_day}!", "SUCCESS")
-                self.log("Bạn có thể mở Replay xem diễn biến, đổi Solver nếu muốn và bấm tiếp cho ngày sau.", "INFO")
+                if self.stop_requested:
+                    self.lbl_status_day.config(text=f"Trạng thái: Đã dừng trước khi nộp Ngày {curr_day}")
+                    self.log(f"Đã dừng; chưa xác nhận nộp bài Ngày {curr_day}.", "WARN")
+                else:
+                    self.lbl_status_day.config(text=f"Trạng thái: Đã hoàn tất nộp Ngày {curr_day}! Sẵn sàng.")
+                    self.log(f"🎯 ĐÃ HOÀN TẤT NỘP BÀI NGÀY {curr_day}!", "SUCCESS")
+                    self.log("Bạn có thể mở Replay xem diễn biến, đổi Solver nếu muốn và bấm tiếp cho ngày sau.", "INFO")
             else:
                 current_target = curr_day
                 while not self.stop_requested and current_target <= total_days:
@@ -1717,7 +2047,7 @@ class HexControlCenter(tk.Tk):
                         if st_pre.get("status") == "finished":
                             self.log("🏁 Trận đấu đã hoàn thành trên server!", "SUCCESS")
                             break
-                        live_cur = st_pre.get("currentDay", st_pre.get("current_day"))
+                        live_cur = read_server_day(st_pre)
                         if live_cur and live_cur > current_target:
                             current_target = live_cur
                     except Exception:
@@ -1766,8 +2096,11 @@ class HexControlCenter(tk.Tk):
                         servings = t.get("total_udon_servings", 0)
                         types = t.get("total_udon_types", 0)
                         daily = t.get("total_udon_daily_types", 0)
-                        self.log(f"🚩 Đội {t_name}: {servings} bát mì | {types}/4 loại mì | {daily} loại/ngày", "SUCCESS")
-                        self.lbl_status_score.config(text=f"Điểm số: {servings} bát mì (Loại: {types}/4, Daily: {daily})")
+                        brand_max = len({spot.get("brand") for spot in map_config.get("spots", [])
+                                         if isinstance(spot, dict) and "brand" in spot})
+                        daily_max = brand_max * total_days
+                        self.log(f"🚩 Đội {t_name}: {servings} bát mì | {types}/{brand_max} loại mì | Daily: {daily}/{daily_max}", "SUCCESS")
+                        self.lbl_status_score.config(text=f"Điểm số: {servings} bát mì (Loại: {types}/{brand_max}, Daily: {daily}/{daily_max})")
                 self.lbl_status_day.config(text="Trạng thái: Trận đấu đã hoàn thành")
                 self.log(f"Xem replay: {self.current_match_url}", "INFO")
                 self.log(f"===========================================================", "SUCCESS")

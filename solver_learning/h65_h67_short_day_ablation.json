@@ -1,0 +1,23 @@
+{
+  "target": [16, 112, 339],
+  "case": "cases/user-input-25x25.json",
+  "checkpoint": "solver_learning/runs/h61-full-q3s1-user-input-25x25-match-s1.json",
+  "day": 4,
+  "traffic": "idle",
+  "roles": [1, 0, 0, 0],
+  "seed": 1,
+  "results": {
+    "boundary_default": 34,
+    "endpoint_quota_6_bowl_slack_2": 34,
+    "pool_capacity_128": 34,
+    "policy_coordinated": 34,
+    "policy_aco_ls": 34,
+    "policy_lns_dp": 34
+  },
+  "decision": "rejected",
+  "notes": [
+    "all candidates retained full 16-type coverage",
+    "no generator or route-capacity change improved day 4",
+    "day 6 boundary control also remained 34"
+  ]
+}
