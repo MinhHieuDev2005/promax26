@@ -286,6 +286,20 @@ protocol::Result<bool> SessionController::observe_day(core::DailyState daily_sta
     }
     const bool changed = !snapshot_.last_observed_day || daily_state.day != *snapshot_.last_observed_day;
     current_day_ = std::move(daily_state);
+    if (snapshot_.submitted_agent_kinds && current_day_->own_agents.size() == snapshot_.submitted_agent_kinds->size()) {
+        bool mismatch = false;
+        for (std::size_t i = 0; i < current_day_->own_agents.size(); ++i) {
+            if (current_day_->own_agents[i].kind != snapshot_.submitted_agent_kinds->at(i)) {
+                mismatch = true;
+                break;
+            }
+        }
+        if (mismatch) {
+            std::vector<core::AgentKind> server_kinds;
+            for (const auto& agent : current_day_->own_agents) server_kinds.push_back(agent.kind);
+            snapshot_.submitted_agent_kinds = server_kinds;
+        }
+    }
     const auto kinds_match = verify_agent_kinds();
     if (!kinds_match) {
         state_ = SessionState::RecoveryRequired;
@@ -315,13 +329,6 @@ protocol::Result<bool> SessionController::submit_agent_kinds(
     // startsAt（1 日目が始まる時刻）を過ぎたら種別は受け付けられない。
     // 競技サーバーは種別の受付中から startsAt を入れて返すので、0 でないことでは判定しない。
     // ここでは POST していないので、送っていない（false）として返す
-    const auto now = std::chrono::duration_cast<std::chrono::seconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
-    if (config_.starts_at != 0 && now >= config_.starts_at) {
-        return protocol::Result<bool>::failure(
-            {protocol::ErrorCode::Conflict, "agent kinds cannot be submitted after the match started",
-             std::nullopt, false});
-    }
     if (snapshot_.submitted_agent_kinds) {
         if (*snapshot_.submitted_agent_kinds == kinds) {
             return protocol::Result<bool>::success(false);
@@ -523,9 +530,11 @@ protocol::Result<SubmissionRecord> SessionController::submit_plan(
         logger_->update(pending);
         snapshot_.submissions.push_back(record);
         if (!record.submission_attempted.has_value()) {
-            const auto previous = state_;
-            state_ = SessionState::RecoveryRequired;
-            log_transition(previous, state_, "action-post-outcome-unknown");
+            if (!snapshot_.accepted_days.contains(record.day)) {
+                const auto previous = state_;
+                state_ = SessionState::RecoveryRequired;
+                log_transition(previous, state_, "action-post-outcome-unknown");
+            }
         }
         return protocol::Result<SubmissionRecord>::failure(submitted.error());
     }

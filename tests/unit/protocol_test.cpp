@@ -2,18 +2,22 @@
 #include "hexa_udon/protocol/request_id_digest.hpp"
 
 #include <cassert>
+#include <algorithm>
 #include <deque>
 #include <iostream>
+#include <stdexcept>
 
 namespace {
 
 class FakeTransport final : public hexa_udon::protocol::HttpTransport {
 public:
     std::deque<hexa_udon::protocol::Result<hexa_udon::protocol::HttpResponse>> results;
+    std::vector<hexa_udon::protocol::HttpRequest> requests;
 
     hexa_udon::protocol::Result<hexa_udon::protocol::HttpResponse> execute(
-        const hexa_udon::protocol::HttpRequest&) override {
+        const hexa_udon::protocol::HttpRequest& request) override {
         assert(!results.empty());
+        requests.push_back(request);
         auto result = std::move(results.front());
         results.pop_front();
         return result;
@@ -36,7 +40,72 @@ hexa_udon::protocol::Error post_kind_error(
 
 }  // namespace
 
+void check_haui_protocol() {
+    using namespace hexa_udon;
+    const auto require = [](bool passed) {
+        if (!passed) throw std::runtime_error("HAUI protocol regression");
+    };
+    FakeTransport transport;
+    protocol::ApiConfig config;
+    config.base_url = "https://example.invalid";
+    config.token = "test/secret";
+    config.haui_match_id = "match-42";
+    config.minimum_request_interval = std::chrono::milliseconds{0};
+    protocol::ProconApiClient client(transport, config);
+    const auto response = [&transport](std::string body, long status = 200) {
+        transport.results.push_back(protocol::Result<protocol::HttpResponse>::success(
+            {status, std::move(body), std::chrono::milliseconds{1}}));
+    };
+    const nlohmann::json setting = {
+        {"startsAt", 1}, {"daySeconds", {60}}, {"daySteps", {40}},
+        {"map", {{"height", 8}, {"width", 8}, {"cells", std::vector<std::vector<int>>(8, std::vector<int>(8, 0))}}},
+        {"spots", nlohmann::json::array()}, {"agents", {0}}, {"fuelLimits", 20},
+        {"players", 2}, {"busyThreshold", 2}, {"jammedThreshold", 4}};
+    response(setting.dump());
+    const auto match = client.get_setting();
+    require(match.has_value());
+    response("{}");
+    require(client.post_agent_kinds({core::AgentKind::Patrol}).has_value());
+    response(R"({"endsAt":100,"day":0,"agents":[{"kind":0,"pos":0,"fuel":20}],"others":[],"traffics":[]})");
+    require(client.get_state(match.value()).has_value());
+    response(R"({"revision":3})");
+    const simulator::DayActionPlan plan{{simulator::WaitAction{40}}};
+    const auto revision = client.post_actions(plan);
+    require(revision.has_value() && revision.value() == 3);
+    const std::vector<std::string> endpoints{"config", "agents", "status", "answer"};
+    for (std::size_t index = 0; index < endpoints.size(); ++index) {
+        const auto& request = transport.requests.at(index);
+        require(request.url == config.base_url + "/api/game/matches/match-42/" + endpoints[index]);
+        require(std::find(request.headers.begin(), request.headers.end(), "x-api-token: test/secret") != request.headers.end());
+        require(request.url.find("secret") == std::string::npos);
+        require(request.method == (index % 2 == 0 ? protocol::HttpMethod::Get : protocol::HttpMethod::Post));
+    }
+    require(transport.requests.at(1).body == "[0]");
+    require(transport.requests.at(3).body == "[[-40]]");
+    response("{}");
+    const auto unknown = client.post_actions(plan);
+    require(!unknown && !unknown.error().submission_attempted.has_value());
+    response("", 404);
+    const auto missing = client.get_setting();
+    require(!missing && missing.error().message == "HTTP 404");
+    config.token = "secret\r\nx-injected: value";
+    protocol::ProconApiClient invalid_token(transport, config);
+    require(!invalid_token.get_setting());
+    config.token = "secret";
+    config.haui_match_id = "../another-match";
+    protocol::ProconApiClient invalid_id(transport, config);
+    require(!invalid_id.get_setting());
+    require(transport.requests.size() == 6);
+    config.haui_match_id.clear();
+    config.token = "test/secret";
+    protocol::ProconApiClient original(transport, config);
+    response(setting.dump());
+    require(original.get_setting().has_value());
+    require(transport.requests.back().url == config.base_url + "/setting?token=test%2Fsecret");
+}
+
 int main() {
+    check_haui_protocol();
     using hexa_udon::protocol::request_id_digest;
     using hexa_udon::protocol::request_id_digest_or_missing;
     const nlohmann::json id = "request-α";

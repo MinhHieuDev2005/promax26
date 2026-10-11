@@ -16,6 +16,7 @@ struct ApiConfig {
     std::size_t max_response_bytes = 1024 * 1024;
     std::string user_agent = "hexa-udon/0.1";
     std::chrono::milliseconds minimum_request_interval{250};
+    std::string haui_match_id;
 };
 
 class ProconApiClient {

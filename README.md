@@ -2,6 +2,65 @@
 
 高専プロコン 2026 競技部門「ヘキサうどん」の C++20 クライアントです。公式 API との通信・Session の保存と復旧は o-udon の実装、種別決めと毎日の計画は solver（補給の時期と場所も計画に入れる LNS ＋ 焼きなまし）で行います。
 
+## GUI cục bộ (tiếng Việt)
+
+### Bản cài riêng trên máy Windows này
+
+- Ubuntu riêng tên `HexaUdon`, lưu tại `D:\WSL\HexaUdon`; không đổi cấu hình Docker/WSL chung.
+- Nhấp đúp `Open-HexaUdon.cmd` để mở GUI. Nhập URL/token rồi kiểm tra kết nối trước.
+  Launcher dành cho dự án ở `D:\30013-o-udon`, binary ở `/home/hexa/build-release/hexa_udon`.
+  Giữ cửa sổ launcher mở (có thể thu nhỏ) trong khi chơi để WSL tiếp tục hoạt động.
+- Launcher chạy bằng tài khoản Linux không có quyền quản trị `hexa`, giới hạn cả GUI/client
+  tối đa 3 GiB RAM, 512 MiB swap và hai CPU logic. Solver dùng hai luồng.
+  Đây là giới hạn của tiến trình trò chơi, không phải toàn bộ bộ nhớ WSL.
+  Chế độ nhẹ có thể tìm lời giải kém hơn chế độ dùng nhiều CPU.
+- Nhấp đúp `Stop-HexaUdon.cmd` và xác nhận để tắt riêng Ubuntu này khi chơi xong.
+  Đóng tab không tắt backend. Dừng giữa lúc POST có thể làm kết quả gửi không rõ ràng.
+- GUI không được cấu hình tự chạy khi khởi động Windows. Bấm mở lần sau sẽ chạy lại.
+
+**Gỡ sau khi không dùng:** dừng game trước. Nếu cần giữ phiên/log, sao chép
+`\\wsl.localhost\HexaUdon\home\hexa\.hexa-udon-gui` ra thư mục Windows trước khi gỡ.
+Sau đó chạy trong PowerShell:
+
+```powershell
+wsl --unregister HexaUdon
+```
+
+**Lệnh trên xóa vĩnh viễn Ubuntu HexaUdon, binary và dữ liệu bên trong nó.**
+Không chạy với tên `docker-desktop`. Mã nguồn tại `D:\30013-o-udon` vẫn được giữ lại.
+
+### Chạy thủ công
+
+GUI có nút kiểm tra kết nối, chạy thử, chạy thật, dừng và xem trạng thái phiên.
+Không cần cài thư viện Python ngoài. Trên Windows, chạy backend trong **Ubuntu/WSL**,
+không chạy client C++ trực tiếp bằng PowerShell.
+
+Sau khi build `build-release/hexa_udon` theo phần bên dưới, chạy trong thư mục dự án:
+
+```bash
+python3 gui.py
+```
+
+Mở `http://127.0.0.1:8765` trong trình duyệt Windows, nhập URL máy chủ và token của
+ban tổ chức. Chọn **Kiểm tra kết nối**, rồi **Chạy thử** trước khi **Chạy thật**.
+Chạy thật yêu cầu xác nhận và sẽ POST bài thi; chạy thử vẫn kết nối mạng và gửi token.
+Token bị xóa khỏi ô nhập sau khi bắt đầu, nên cần nhập lại cho lần chạy kế tiếp.
+
+- GUI chỉ lắng nghe loopback; không public, proxy hay mở cổng ra LAN/Internet.
+- GUI không ghi token xuống tệp, không dùng browser storage và che token trong log hiển thị.
+  Client C++ vẫn tạo session/log của riêng nó. Chỉ dùng máy chủ đáng tin cậy; HTTP không mã hóa token.
+- Mỗi lần chạy dùng thư mục riêng trong `~/.hexa-udon-gui/`, không ghi đè phiên cũ.
+  GUI chỉ nhớ đường dẫn phiên gần nhất trong lần mở hiện tại. Sau khi mở lại GUI,
+  dùng CLI `show-state --session-dir PATH` để kiểm tra phiên cũ.
+- Đóng tab không dừng client. Nút **Dừng** hoặc Ctrl+C tại terminal GUI sẽ dừng client;
+  có thể không xác định được kết quả POST đang gửi. Nếu thấy `RecoveryRequired`,
+  không tự chạy lại: kiểm tra trạng thái phiên và trạng thái trên máy chủ trước.
+- Không chạy thêm một GUI/client khác cho cùng trận. Giới hạn một tiến trình chỉ áp dụng
+  trong một backend GUI. Chưa có tự động phục hồi, quản lý nhiều trận hoặc LAN worker.
+- Nếu binary nằm nơi khác: `python3 gui.py --binary ./build/hexa_udon`.
+  Nếu cổng bận: `python3 gui.py --port 8766`.
+- Kiểm thử GUI (không kết nối máy chủ thi đấu): `python3 -B tests/gui_check.py`.
+
 ## 1. ビルド
 
 必要なもの: C++20 対応コンパイラ（GCC 13 で確認）、CMake 3.20 以上、nlohmann_json 3.11.3 以上、libcurl。
@@ -130,3 +189,17 @@ worker は日の締切の 1 秒前（`--lan-worker-timeout-ms` で上限を指�
 | LAN worker | `src/app/lan_worker.cpp` |
 | HTTP・rate limit・Retry-After | `src/protocol/` |
 | Session・Recovery・polling・永続化 | `src/session/` |
+# Agent selection stability
+
+This branch reconstructs the HAUI client before the 1.5% daily-brand tolerance
+and fewer-supply preference were introduced. The selector spends 35% of its
+budget screening candidates, then evaluates up to three finalists over three
+shared seeds. Each evaluation simulates normal and congested roads and keeps
+the worse value of each score component. Rank by lexicographic median, then
+worst score, preserving screening order on ties. Only complete rounds count.
+
+The client retains the 60-second HAUI window, half-budget selection (about
+28.5 seconds with a full window), day-zero preplanning and 8 GUI solver threads.
+Search initialization can overrun its slice; no hard real-time guarantee.
+This is a reconstructed source snapshot, not an original historical commit.
+The offline benchmark and its private logs/configuration are not included.

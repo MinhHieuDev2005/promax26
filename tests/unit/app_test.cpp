@@ -4,6 +4,7 @@
 
 #include <utility>
 #include <vector>
+#include <sstream>
 
 // solver を o-udon の型で動かしたときの最低限の確認
 int main() {
@@ -74,7 +75,25 @@ int main() {
     if (solver::fromActionPlan(solver::toActionPlan(planned)) != planned) return 10;
 
     // 種別決めは車の数だけ種別を返す
-    const auto kinds = solver::solveKind(300.0);
+    const auto stable = solver::kindEvidence({{10, 70, 180}, {10, 70, 181}, {10, 70, 182}});
+    const auto lucky = solver::kindEvidence({{10, 70, 160}, {10, 70, 170}, {10, 70, 210}});
+    if (!(lucky < stable)) return 110;
+    const auto fragile = solver::kindEvidence({{10, 70, 100}, {10, 70, 181}, {10, 70, 220}});
+    if (!(fragile < stable)) return 111;
+    if (!(stable < solver::kindEvidence({{10, 71, 100}, {10, 71, 100}, {10, 71, 100}}))) return 112;
+    const auto original_rng = solver::rng.x;
+    solver::today = 1;
+    const auto fallback = solver::solveKind(0.0);
+    if (fallback != solver::kindCandidates().front()) return 113;
+    if (solver::rng.x != original_rng || solver::today != 1 || solver::choosingKinds) return 114;
+    solver::threads = 2;
+    std::ostringstream selection_log;
+    auto* previous_log = std::cerr.rdbuf(selection_log.rdbuf());
+    const auto kinds = solver::solveKind(1000.0);
+    std::cerr.rdbuf(previous_log);
+    if (selection_log.str().find("stage=verify round=1") == std::string::npos) return 116;
+    if (selection_log.str().find("[kind] selected=") == std::string::npos) return 117;
+    if (solver::rng.x != original_rng || solver::today != 1 || solver::choosingKinds) return 115;
     solver::choosingKinds = false;
     if (kinds.size() != 3) return 11;
     return 0;

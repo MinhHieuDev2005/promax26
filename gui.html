@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hexa Udon — Điều khiển</title>
+<style nonce="NONCE">
+body{font:16px system-ui,sans-serif;background:#f3f5f7;color:#17212b;margin:0;padding:24px}main{max-width:900px;margin:auto}
+section{background:white;border:1px solid #ccd4dc;border-radius:12px;padding:24px;margin:20px 0}label{display:block;margin-top:16px;font-weight:600}
+input,select{box-sizing:border-box;width:100%;padding:12px;margin-top:6px;border:1px solid #687887;border-radius:6px;font:inherit}
+button{font:inherit;border:0;border-radius:6px;padding:12px 16px;background:#1659a5;color:white;cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}
+button.danger{background:#ac2929}.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid #d08100;outline-offset:3px}
+.warning{background:#fff2ce;padding:12px;border-radius:6px}pre{background:#14202b;color:#e5edf5;padding:16px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto}
+#message{color:#9e2424;min-height:1.5em}#session{overflow-wrap:anywhere}small{display:block;margin-top:8px}
+</style>
+</head>
+<body><main><h1>Hexa Udon</h1><p>Bảng điều khiển cục bộ · một tiến trình tại một thời điểm</p>
+<section><h2>Kết nối máy chủ</h2><p class="warning">Chạy thử vẫn gửi token để kết nối máy chủ, nhưng không POST bài thi. Chỉ dùng máy chủ do ban tổ chức cung cấp. HTTP không mã hóa token.</p>
+<form id="connection" autocomplete="off">
+<label for="backend">Loại máy chủ</label><select id="backend"><option value="haui">HAUI — chọn trận đấu</option><option value="procon">Procon gốc — /setting</option></select>
+<label for="url">Địa chỉ máy chủ</label><input id="url" type="url" value="https://procon26.haui.ac.vn" required maxlength="2048">
+<label for="token">Token</label><input id="token" type="password" required maxlength="2048" autocomplete="off" spellcheck="false">
+<small>Token được giữ trong ô nhập để tiện thao tác tiếp tục mà không cần nhập lại.</small>
+<div id="match-field"><div class="buttons"><button type="button" id="load-matches" disabled>Tải danh sách trận</button></div>
+<label for="match">Trận đấu HAUI</label><select id="match" required><option value="">Nhập token rồi tải danh sách trận</option></select>
+<small>Chọn đúng trận, kiểm tra kết nối rồi chạy thử trước khi chạy thật.</small></div>
+<div class="buttons"><button type="button" data-mode="check" disabled>Kiểm tra kết nối</button><button type="button" data-mode="dry" disabled>Chạy thử</button><button type="button" class="danger" data-mode="execute" disabled>Chạy thật…</button></div>
+</form><p id="message" role="alert"></p></section>
+<section><h2>Trạng thái</h2><p id="status" role="status">Đang kết nối GUI…</p><p id="session"></p>
+<p class="warning">Nếu có RecoveryRequired hoặc POST không rõ kết quả, đừng chạy lại. Kiểm tra trạng thái phiên và liên hệ ban tổ chức. Đóng tab không dừng chương trình.</p>
+<div class="buttons"><button id="show" disabled>Xem trạng thái phiên</button><button id="stop" class="danger" disabled>Dừng…</button></div>
+<h3>Log gần nhất</h3><pre id="log" tabindex="0" aria-label="Log chương trình"></pre></section></main>
+<script nonce="NONCE">
+const key = 'NONCE';
+let busy = false;
+const element = id => document.getElementById(id);
+async function api(path, data) {
+  const response = await fetch(path, {method: data === undefined ? 'GET' : 'POST',
+    headers: {'X-GUI-Key': key, 'Content-Type': 'application/json'},
+    body: data === undefined ? undefined : JSON.stringify(data), cache: 'no-store'});
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Yêu cầu thất bại');
+  return result;
+}
+function render(state) {
+  const haui = element('backend').value === 'haui';
+  element('match-field').hidden = !haui;
+  element('match').required = haui;
+  ['url', 'token', 'backend', 'match'].forEach(id => element(id).disabled = busy || state.running);
+  element('load-matches').disabled = busy || state.running;
+  document.querySelectorAll('[data-mode]').forEach(button => button.disabled = busy || state.running || !state.ready || (haui && !element('match').value));
+  element('stop').disabled = busy || !state.running;
+  element('show').disabled = busy || state.running || !state.session;
+  element('status').textContent = state.running ? 'Đang chạy: ' + state.mode : state.exit_code === null ? 'Sẵn sàng' : 'Đã kết thúc — mã thoát ' + state.exit_code;
+  if (!state.ready) element('status').textContent = 'Chưa có binary. Hãy build build-release/hexa_udon, rồi khởi động lại GUI.';
+  element('session').textContent = state.session ? 'Phiên gần nhất: ' + state.session : 'Chưa có phiên trong lần mở GUI này.';
+  const log = element('log');
+  const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+  log.textContent = state.log;
+  if (atBottom) log.scrollTop = log.scrollHeight;
+}
+async function refresh() {
+  try { render(await api('/status')); }
+  catch (error) {
+    element('status').textContent = 'Mất kết nối GUI; tiến trình có thể vẫn đang chạy.';
+    document.querySelectorAll('button').forEach(button => button.disabled = true);
+  }
+}
+async function action(path, data) {
+  busy = true;
+  document.querySelectorAll('button').forEach(button => button.disabled = true);
+  element('message').textContent = '';
+  try {
+    const result = await api(path, data);
+    if (path === '/matches') {
+      element('match').replaceChildren(new Option('Chọn trận đấu…', ''));
+      result.matches.forEach(match => element('match').add(new Option(match.name + ' [' + match.id + '] — ' + match.status, match.id)));
+      if (!result.matches.length) element('message').textContent = 'Token được chấp nhận nhưng chưa có trận nào trong danh sách.';
+    }
+    // token kept in input
+  }
+  catch (error) { element('message').textContent = error.message; }
+  finally { busy = false; await refresh(); }
+}
+element('connection').addEventListener('submit', event => event.preventDefault());
+function connectionData(mode) {
+  return {mode, backend: element('backend').value, url: element('url').value,
+    token: element('token').value, match_id: element('match').value};
+}
+['url', 'token', 'backend'].forEach(id => element(id).addEventListener('input', () => {
+  element('match').replaceChildren(new Option('Tải lại danh sách trận', ''));
+  refresh();
+}));
+if (sessionStorage.getItem('procon_token')) element('token').value = sessionStorage.getItem('procon_token');
+element('token').addEventListener('input', () => sessionStorage.setItem('procon_token', element('token').value));
+element('match').addEventListener('change', refresh);
+element('load-matches').addEventListener('click', () => {
+  if (element('url').reportValidity() && element('token').reportValidity()) action('/matches', connectionData('matches'));
+});
+document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
+  if (!element('connection').reportValidity()) return;
+  const mode = button.dataset.mode;
+  const matchLabel = element('backend').value === 'haui' ? element('match').selectedOptions[0].textContent : 'Procon';
+  const confirmed = mode === 'execute' ? confirm('CHẠY THẬT: tự động gửi bài thi cho ' + matchLabel + '. Bạn xác nhận đúng trận và muốn bắt đầu?') : false;
+  if (mode === 'execute' && !confirmed) return;
+  action('/start', {...connectionData(mode), confirmed});
+}));
+element('stop').addEventListener('click', () => {
+  if (confirm('Dừng có thể làm mất kết quả POST đang gửi. Không tự chạy lại khi chưa xác minh trạng thái. Tiếp tục?')) action('/stop', {confirmed: true});
+});
+element('show').addEventListener('click', () => action('/start', {mode: 'state'}));
+refresh();
+setInterval(refresh, 1000);
+</script></body></html>

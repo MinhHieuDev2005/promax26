@@ -58,6 +58,7 @@ extern "C" void signal_handler(int) { stop_requested = 1; }
 struct Options {
     std::string command;
     std::string base_url;
+    std::string haui_match_id;
     std::string token_environment = "PROCON_TOKEN";
     std::filesystem::path session_directory = "run/session";
     std::filesystem::path log_directory = "run/log";
@@ -94,6 +95,7 @@ void usage() {
               << "  hexa_udon worker --listen 127.0.0.1:PORT --worker-token-env NAME\n"
               << "  hexa_udon worker-preflight --listen HOST:PORT --worker-token-env NAME\n"
               << "Options: --token-env NAME --session-dir DIR --log-dir DIR --poll-ms N\n"
+              << "         --haui-match ID (HAUI endpoints and x-api-token authentication)\n"
               << "         --connect-timeout-ms N --total-timeout-ms N --safety-seconds N\n"
               << "         --max-get-retries N --log-level info|warning|error\n";
     std::cerr << "         --kind-ms N (types; default: size deadline 60/90/120 s minus elapsed and safety)\n"
@@ -123,6 +125,13 @@ std::optional<Options> parse_options(int argc, char** argv) {
         auto next = [&]() -> const char* { return ++index < argc ? argv[index] : nullptr; };
         if (value == "--execute") options.execute = true;
         else if (value == "--base-url") { const auto* item = next(); if (!item) return {}; options.base_url = item; }
+        else if (value == "--haui-match") {
+            const auto* item = next();
+            if (!item || !*item || !options.haui_match_id.empty()) return {};
+            options.haui_match_id = item;
+            if (options.haui_match_id.size() > 128
+                || options.haui_match_id.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-") != std::string::npos) return {};
+        }
         else if (value == "--token-env") { const auto* item = next(); if (!item) return {}; options.token_environment = item; }
         else if (value == "--session-dir") { const auto* item = next(); if (!item) return {}; options.session_directory = item; }
         else if (value == "--log-dir") { const auto* item = next(); if (!item) return {}; options.log_directory = item; }
@@ -283,7 +292,10 @@ int main(int argc, char** argv) {
                                             : protocol::OperationLogEntry::Level::Info;
     protocol::FileOperationLogger logger(options->log_directory / "operations.jsonl", log_level);
     protocol::CurlHttpTransport transport;
-    protocol::ApiConfig api_config{options->base_url, token};
+    protocol::ApiConfig api_config;
+    api_config.base_url = options->base_url;
+    api_config.token = token;
+    api_config.haui_match_id = options->haui_match_id;
     api_config.connect_timeout = std::chrono::milliseconds{options->connect_timeout_ms};
     api_config.total_timeout = std::chrono::milliseconds{options->total_timeout_ms};
     protocol::ProconApiClient api(transport, api_config, nullptr, &logger);
@@ -291,9 +303,19 @@ int main(int argc, char** argv) {
         std::cout << "mode=CHECK baseUrlConfigured=true\n";
         const auto setting = api.get_setting();
         if (!setting) {
+            if (setting.error().code == protocol::ErrorCode::AccessTime) {
+                std::cout << "connection-check=ok status=waiting (match-not-started-yet)\n";
+                return 0;
+            }
             // Never expose transport messages: curl/DNS errors can contain the configured host.
             std::cerr << "connection-check=failed code="
-                      << safe_error_classification(setting.error().code) << '\n';
+                      << safe_error_classification(setting.error().code);
+            const auto& message = setting.error().message;
+            if (message.size() == 8 && message.starts_with("HTTP ")
+                && std::all_of(message.begin() + 5, message.end(), [](char character) {
+                    return character >= '0' && character <= '9';
+                })) std::cerr << " httpStatus=" << message.substr(5);
+            std::cerr << '\n';
             return 1;
         }
         std::cout << "connection-check=ok startsAt=" << setting.value().starts_at

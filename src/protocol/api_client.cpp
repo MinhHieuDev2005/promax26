@@ -114,6 +114,16 @@ Result<HttpResponse> ProconApiClient::request(
     HttpMethod method, const std::string& path, const std::string& body,
     std::optional<SteadyTime> deadline, const std::string& phase,
     std::optional<std::uint64_t> local_submission_id, std::size_t attempt) {
+    const bool haui = !config_.haui_match_id.empty();
+    if (haui && (config_.haui_match_id.size() > 128
+        || config_.haui_match_id.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-") != std::string::npos
+        || config_.token.empty() || config_.token.size() > 2048
+        || !std::all_of(config_.token.begin(), config_.token.end(), [](unsigned char character) {
+            return character >= 33 && character <= 126;
+        }))) {
+        return Result<HttpResponse>::failure(
+            {ErrorCode::InvalidSchema, "invalid HAUI match ID or header token", std::nullopt, false});
+    }
     auto permission = limiter_->acquire(deadline);
     if (!permission) {
         OperationLogEntry entry;
@@ -169,9 +179,15 @@ Result<HttpResponse> ProconApiClient::request(
         if (method == HttpMethod::Post) error.submission_attempted = false;
         return Result<HttpResponse>::failure(std::move(error));
     }
+    const std::string endpoint = haui
+        ? "/api/game/matches/" + config_.haui_match_id
+            + (path == "/setting" ? "/config" : path == "/agent" ? "/agents"
+                : method == HttpMethod::Get ? "/status" : "/answer")
+        : path;
     HttpRequest request{
         method,
-        with_token(join_url(config_.base_url, path), config_.token),
+        haui ? join_url(config_.base_url, endpoint)
+             : with_token(join_url(config_.base_url, endpoint), config_.token),
         {"Accept: application/json"},
         body,
         config_.connect_timeout,
@@ -179,6 +195,7 @@ Result<HttpResponse> ProconApiClient::request(
         config_.max_response_bytes,
         config_.user_agent,
     };
+    if (haui) request.headers.push_back("x-api-token: " + config_.token);
     if (method == HttpMethod::Post) {
         request.headers.push_back("Content-Type: application/json");
     }
@@ -361,8 +378,10 @@ Result<std::int32_t> ProconApiClient::post_actions(
     auto revision = decode_revision(response.value().body);
     if (!revision) {
         auto error = revision.error();
-        error.submission_attempted = std::nullopt;
-        log_post_response("/", response.value(), phase, std::nullopt, "decode-error", local_submission_id);
+        if (!error.submission_attempted.has_value()) {
+            error.submission_attempted = std::nullopt;
+        }
+        log_post_response("/", response.value(), phase, error.submission_attempted, "decode-error", local_submission_id);
         return Result<std::int32_t>::failure(std::move(error));
     }
     log_post_response("/", response.value(), phase, true, "accepted", local_submission_id);

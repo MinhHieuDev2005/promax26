@@ -170,10 +170,16 @@ Result<std::int32_t> decode_revision(const std::string& text) {
             return Result<std::int32_t>::failure(
                 {ErrorCode::MissingRevision, "revision missing"});
         }
+        if (json.contains("valid") && !json["valid"].get<bool>()) {
+            std::string msg = json.value("error", "submission invalid");
+            return Result<std::int32_t>::failure(
+                {ErrorCode::RejectedRevision, msg, std::nullopt, false});
+        }
         const auto revision = integer<std::int32_t>(json, "revision");
         if (revision < 0) {
+            std::string msg = json.value("error", "negative revision");
             return Result<std::int32_t>::failure(
-                {ErrorCode::RejectedRevision, "negative revision"});
+                {ErrorCode::RejectedRevision, msg, std::nullopt, false});
         }
         return Result<std::int32_t>::success(revision);
     } catch (const Json::parse_error& error) {

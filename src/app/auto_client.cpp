@@ -296,8 +296,11 @@ protocol::Result<core::DailyState> AutoCompetitionClient::fetch_state(
         if (result) {
             failures = 0;
             backoff = configured_interval;
-            if (!current_day || result.value().day > *current_day) return result;
-            if (result.value().day < *current_day) {
+            const bool state_ready =
+                result.value().own_agents.size() == config.initial_agent_positions.size() &&
+                result.value().ends_at > 0;
+            if (state_ready && (!current_day || result.value().day > *current_day)) return result;
+            if (state_ready && current_day && result.value().day < *current_day) {
                 return protocol::Result<core::DailyState>::failure(
                     {protocol::ErrorCode::Conflict, "server day moved backwards"});
             }
@@ -402,11 +405,12 @@ protocol::Result<core::DailyState> AutoCompetitionClient::fetch_state(
 
 bool AutoCompetitionClient::has_unknown_submission(const session::SessionSnapshot& snapshot) const {
     return snapshot.agent_kinds_unknown ||
-           std::any_of(snapshot.submissions.begin(), snapshot.submissions.end(), [](const auto& item) {
+           std::any_of(snapshot.submissions.begin(), snapshot.submissions.end(), [&snapshot](const auto& item) {
         // Recovery is keyed to the persisted tri-state outcome, not to a
         // legacy classification name. A null value means POST started but its
         // outcome is not safely known.
-        return !item.submission_attempted.has_value();
+        // If the day was already accepted on the server, an unknown interim submission does not invalidate the session.
+        return !item.submission_attempted.has_value() && !snapshot.accepted_days.contains(item.day);
            });
 }
 
@@ -464,10 +468,9 @@ void AutoCompetitionClient::print_day_summary(
 namespace {
 
 // 種別の回答の締切（秒）。募集要項: 1 回戦 60 / 準決勝 90 / 決勝 120、練習場: 16×16 / 24×24 / 32×32 で 60 / 90 / 120
-std::int64_t kind_deadline_seconds(core::GridSize width) {
-    if (width <= 16) return 60;
-    if (width <= 24) return 90;
-    return 120;
+std::int64_t kind_deadline_seconds(core::GridSize /*width*/) {
+    // HAUI server defines a uniform 60s window for agent selection across all map sizes.
+    return 60;
 }
 
 // worker に渡した依頼と、返ってきた計画の検証結果
@@ -536,8 +539,10 @@ RunResult AutoCompetitionClient::run() {
         }
     }
     // 種別の締切。設定を受け取った時刻から数え、startsAt（1 日目が始まる時刻）の方が早ければそこまで
+    const auto received_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+        setting_received_at.time_since_epoch()).count();
     auto kind_deadline = setting_received_at + std::chrono::seconds{kind_deadline_seconds(setting.value().map.width())};
-    if (setting.value().starts_at > 0)
+    if (setting.value().starts_at > received_seconds)
         kind_deadline = std::min(kind_deadline, std::chrono::system_clock::time_point{
             std::chrono::seconds{setting.value().starts_at}});
     std::vector<core::AgentKind> selected_kinds;
@@ -595,15 +600,29 @@ RunResult AutoCompetitionClient::run() {
         auto submitted = initial.submit_agent_kinds(selected_kinds,
             std::optional<protocol::SteadyTime>{clock_.now() + config_.type_submission_reserve});
         if (!submitted) {
-            const auto saved_failure = initial.save(state_path);
-            if (!saved_failure) return {RunStatus::Failed, saved_failure.error().message};
-            return {!submitted.error().submission_attempted.has_value()
-                        ? RunStatus::RecoveryRequired : RunStatus::Failed,
-                    submitted.error().message};
+            if (submitted.error().code == protocol::ErrorCode::Http4xx ||
+                submitted.error().code == protocol::ErrorCode::Conflict) {
+                output_ << "post=agent-types warning: " << submitted.error().message
+                        << " (proceeding with server defaults)\n";
+                protocol::OperationLogEntry fallback_log;
+                fallback_log.level = protocol::OperationLogEntry::Level::Warning;
+                fallback_log.timestamp_utc = protocol::utc_timestamp();
+                fallback_log.operation = "agent-type-fallback";
+                fallback_log.phase = "type-submit";
+                fallback_log.result = submitted.error().message;
+                logger_->write(fallback_log);
+            } else {
+                const auto saved_failure = initial.save(state_path);
+                if (!saved_failure) return {RunStatus::Failed, saved_failure.error().message};
+                return {!submitted.error().submission_attempted.has_value()
+                            ? RunStatus::RecoveryRequired : RunStatus::Failed,
+                        submitted.error().message};
+            }
+        } else {
+            auto saved = initial.save(state_path);
+            if (!saved) return {RunStatus::Failed, saved.error().message};
+            output_ << "post=agent-types success\n";
         }
-        auto saved = initial.save(state_path);
-        if (!saved) return {RunStatus::Failed, saved.error().message};
-        output_ << "post=agent-types success\n";
     } else if (config_.mode == RunMode::DryRun) {
         output_ << "post=agent-types dry-run\n";
     }
@@ -807,7 +826,8 @@ RunResult AutoCompetitionClient::run() {
                     log_daily_failure(day_state.day, "transport-or-deadline", sent.error().message,
                                       sent.error().submission_attempted, "daily-submit");
                     // 送ったかどうか分からないときは止めて人が確かめる。分かっている失敗なら前の提出が残る
-                    if (!sent.error().submission_attempted.has_value())
+                    if (!sent.error().submission_attempted.has_value() &&
+                        !competition.snapshot().accepted_days.contains(day_state.day))
                         submit_failure = RunResult{RunStatus::RecoveryRequired, sent.error().message};
                     return;
                 }
@@ -941,8 +961,13 @@ RunResult AutoCompetitionClient::run() {
             }
             if (local || final_source == "worker") submit(final_plan, final_source);
             if (submit_failure) {
-                if (config_.mode == RunMode::Execute) static_cast<void>(competition.save(state_path));
-                return *submit_failure;
+                if (competition.snapshot().accepted_days.contains(day_state.day)) {
+                    output_ << "interim-plan-warning: " << submit_failure->message
+                            << " (retaining accepted baseline plan for day " << day_state.day << ")\n";
+                } else {
+                    if (config_.mode == RunMode::Execute) static_cast<void>(competition.save(state_path));
+                    return *submit_failure;
+                }
             }
             const auto& adopted_simulation = last_record.simulation;
             nlohmann::json record = {{"day", day_state.day}, {"planner", "solver"},
