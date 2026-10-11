@@ -144,6 +144,7 @@ const double E_TOMORROW = 500.0;
 const double E_TOMORROW_HEAVY = 30.0;
 const double EMIT_MIN_GAIN = 0.02;
 const double FUEL_TIGHT = 1.5;
+const double KIND_DAY_TOLERANCE = 0.015;
 const double LNS_T0 = 2.0, LNS_T1 = 0.02;
 const double LNS_NOISE = 0.3;
 const int MAX_STATIONS = 8;
@@ -253,6 +254,5 @@ struct MatchScore {
 // 全チームが同じ動きをすると仮定（交通量 = 自チームの滞在数）して全日程を回す
 MatchScore simulateMatch(const vector<int>& kinds, double timeMs, bool busy = false);
 vector<int> solveKind(double timeMs);
-pair<MatchScore, MatchScore> kindEvidence(vector<MatchScore> scores);
 
 }  // namespace hexa_udon::solver

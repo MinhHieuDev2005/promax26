@@ -75,26 +75,43 @@ int main() {
     if (solver::fromActionPlan(solver::toActionPlan(planned)) != planned) return 10;
 
     // 種別決めは車の数だけ種別を返す
-    const auto stable = solver::kindEvidence({{10, 70, 180}, {10, 70, 181}, {10, 70, 182}});
-    const auto lucky = solver::kindEvidence({{10, 70, 160}, {10, 70, 170}, {10, 70, 210}});
-    if (!(lucky < stable)) return 110;
-    const auto fragile = solver::kindEvidence({{10, 70, 100}, {10, 70, 181}, {10, 70, 220}});
-    if (!(fragile < stable)) return 111;
-    if (!(stable < solver::kindEvidence({{10, 71, 100}, {10, 71, 100}, {10, 71, 100}}))) return 112;
-    const auto original_rng = solver::rng.x;
-    solver::today = 1;
-    const auto fallback = solver::solveKind(0.0);
-    if (fallback != solver::kindCandidates().front()) return 113;
-    if (solver::rng.x != original_rng || solver::today != 1 || solver::choosingKinds) return 114;
     solver::threads = 2;
     std::ostringstream selection_log;
     auto* previous_log = std::cerr.rdbuf(selection_log.rdbuf());
     const auto kinds = solver::solveKind(1000.0);
     std::cerr.rdbuf(previous_log);
-    if (selection_log.str().find("stage=verify round=1") == std::string::npos) return 116;
-    if (selection_log.str().find("[kind] selected=") == std::string::npos) return 117;
-    if (solver::rng.x != original_rng || solver::today != 1 || solver::choosingKinds) return 115;
     solver::choosingKinds = false;
     if (kinds.size() != 3) return 11;
+    if (selection_log.str().find("[kind] cand=0") == std::string::npos) return 116;
+    if (selection_log.str().find("stage=verify") != std::string::npos) return 117;
+    struct Candidate { std::string kinds; int brands, daily, balls; };
+    std::vector<Candidate> candidates;
+    std::istringstream lines(selection_log.str());
+    std::string line;
+    while (std::getline(lines, line)) {
+        if (line.rfind("[kind] cand=", 0) != 0) continue;
+        const auto begin = line.find('('), end = line.find(')');
+        candidates.push_back({line.substr(begin + 1, end - begin - 1),
+            std::stoi(line.substr(line.find("brands=") + 7)),
+            std::stoi(line.substr(line.find("dayBrands=") + 10)),
+            std::stoi(line.substr(line.find("balls=") + 6))});
+    }
+    int bestBrands = -1, bestDaily = -1;
+    for (const auto& candidate : candidates) bestBrands = std::max(bestBrands, candidate.brands);
+    for (const auto& candidate : candidates)
+        if (candidate.brands == bestBrands) bestDaily = std::max(bestDaily, candidate.daily);
+    const int tolerance = std::max(1, static_cast<int>(std::lround(bestDaily * 0.015)));
+    const Candidate* expected = nullptr;
+    const auto priority = [](const Candidate& candidate) {
+        return std::tuple{-std::count(candidate.kinds.begin(), candidate.kinds.end(), '1'),
+                          candidate.balls, candidate.daily};
+    };
+    for (const auto& candidate : candidates) {
+        if (candidate.brands != bestBrands || candidate.daily < bestDaily - tolerance) continue;
+        if (!expected || priority(candidate) > priority(*expected)) expected = &candidate;
+    }
+    std::string actual;
+    for (const int kind : kinds) actual += std::to_string(kind);
+    if (!expected || actual != expected->kinds) return 118;
     return 0;
 }

@@ -189,17 +189,17 @@ worker は日の締切の 1 秒前（`--lan-worker-timeout-ms` で上限を指�
 | LAN worker | `src/app/lan_worker.cpp` |
 | HTTP・rate limit・Retry-After | `src/protocol/` |
 | Session・Recovery・polling・永続化 | `src/session/` |
-# Agent selection stability
+# Agent selection
 
-This branch reconstructs the HAUI client before the 1.5% daily-brand tolerance
-and fewer-supply preference were introduced. The selector spends 35% of its
-budget screening candidates, then evaluates up to three finalists over three
-shared seeds. Each evaluation simulates normal and congested roads and keeps
-the worse value of each score component. Rank by lexicographic median, then
-worst score, preserving screening order on ties. Only complete rounds count.
+The prematch selector matches upstream commit `8999313` exactly. Candidates
+are evaluated sequentially with the remaining time shared among untested
+lineups. Each runs normal and congested-road simulations: brand counts use
+the worse result, bowl counts use the sum. Among maximum-match-brand lineups,
+allow daily brands within `max(1, lround(bestDailyBrands * 0.015))`, prefer
+fewer supply vehicles, then more bowls, then more daily brands.
+There is no top-three screening or repeated-seed median stage.
 
-The client retains the 60-second HAUI window, half-budget selection (about
-28.5 seconds with a full window), day-zero preplanning and 8 GUI solver threads.
-Search initialization can overrun its slice; no hard real-time guarantee.
-This is a reconstructed source snapshot, not an original historical commit.
-The offline benchmark and its private logs/configuration are not included.
+The HAUI client window, half-budget selection (about 28.5 seconds when the
+full window remains), day-zero preplanning, 8-thread GUI configuration and
+submission behavior are unchanged. Initialization can overrun the budget;
+this is not a hard real-time guarantee. HAUI score gains remain unverified.

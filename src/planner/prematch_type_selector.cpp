@@ -45,7 +45,6 @@ vector<vector<int>> kindCandidates() {
 }
 
 MatchScore simulateMatch(const vector<int>& kinds, double timeMs, bool busy) {
-    Timer timer;
     vector<Agent> st(NA);
     for (int i = 0; i < NA; i++) st[i] = {kinds[i], agentStart[i], FUEL_LIMIT};
     vector<char> collected(B, 0);
@@ -58,9 +57,7 @@ MatchScore simulateMatch(const vector<int>& kinds, double timeMs, bool busy) {
         if (busy && d > 0)
             for (int c = 0; c < NC; c++) if (cellType[c] == ROAD) status[c] = max(status[c], 1);
         today = d;
-        const double remaining = timeMs - timer.ms();
-        if (remaining <= 0) return {-1, -1, -1};
-        auto plan = planDay(st, status, collected, daySteps[d], d == D - 1, remaining / (D - d));
+        auto plan = planDay(st, status, collected, daySteps[d], d == D - 1, timeMs / D);
         DayResult r = simulateDay(st, plan, status, daySteps[d]);
         if (!r.valid) r = simulateDay(st, allWait(daySteps[d]), status, daySteps[d]);
         for (int b = 0; b < B; b++) collected[b] |= r.brandHit[b];
@@ -72,73 +69,43 @@ MatchScore simulateMatch(const vector<int>& kinds, double timeMs, bool busy) {
     return ms;
 }
 
-pair<MatchScore, MatchScore> kindEvidence(vector<MatchScore> scores) {
-    if (scores.empty()) return {{-1, -1, -1}, {-1, -1, -1}};
-    sort(scores.begin(), scores.end());
-    return {scores[(scores.size() - 1) / 2], scores.front()};
-}
-
 vector<int> solveKind(double timeMs) {
-    const auto saved_rng = rng;
-    const auto saved_day = today;
-    const auto saved_choosing = choosingKinds;
     choosingKinds = true;
-    Timer timer;
-    auto candidates = kindCandidates();
-    const double screening_end = max(0.0, timeMs * 0.35);
-    const double screening_slice = max(0.0, screening_end - timer.ms()) / candidates.size();
-    const auto evaluate = [&](size_t candidate, double slice, uint64_t seed) {
-        const double end = min(timeMs, timer.ms() + slice);
-        rng.x = seed;
-        const auto smooth = simulateMatch(candidates[candidate], max(0.0, end - timer.ms()) / 2);
-        rng.x = seed;
-        const auto heavy = simulateMatch(candidates[candidate], max(0.0, end - timer.ms()), true);
-        if (smooth.matchBrands < 0 || heavy.matchBrands < 0) return MatchScore{-1, -1, -1};
-        return MatchScore{min(smooth.matchBrands, heavy.matchBrands),
-                          min(smooth.dayBrands, heavy.dayBrands), min(smooth.balls, heavy.balls)};
-    };
-    vector<pair<MatchScore, size_t>> screened;
-    for (size_t candidate = 0; candidate < candidates.size(); ++candidate) {
-        if (timer.ms() >= screening_end) break;
-        const auto score = evaluate(candidate, min(screening_slice, screening_end - timer.ms()), saved_rng.x);
-        if (score.matchBrands >= 0) screened.emplace_back(score, candidate);
-        cerr << "[kind] stage=screen candidate=" << candidate << " brands=" << score.matchBrands
-             << " dayBrands=" << score.dayBrands << " balls=" << score.balls << '\n';
+    auto cands = kindCandidates();
+    Timer tm;
+    vector<pair<MatchScore, vector<int>>> scored;
+    for (size_t c = 0; c < cands.size(); c++) {
+        double remain = timeMs - tm.ms();
+        if (c > 0 && remain <= 0) { cerr << "[kind] 時間切れ: 残り " << cands.size() - c << " 候補を省略\n"; break; }
+        const double each = max(1.0, remain / (cands.size() - c)) / 2;
+        MatchScore smooth = simulateMatch(cands[c], each), heavy = simulateMatch(cands[c], each, true);
+        MatchScore ms{min(smooth.matchBrands, heavy.matchBrands), min(smooth.dayBrands, heavy.dayBrands),
+                      smooth.balls + heavy.balls};
+        cerr << "[kind] cand=" << c << " (";
+        for (int k : cands[c]) cerr << k;
+        cerr << ") brands=" << ms.matchBrands << " dayBrands=" << ms.dayBrands << " balls=" << ms.balls << "\n";
+        scored.push_back({ms, cands[c]});
     }
-    stable_sort(screened.begin(), screened.end(), [](const auto& left, const auto& right) {
-        return right.first < left.first;
-    });
-    if (screened.size() > 3) screened.resize(3);
-    size_t selected = screened.empty() ? 0 : screened.front().second;
-    vector<vector<MatchScore>> evidence(screened.size());
-    const double slice = max(0.0, timeMs - timer.ms()) / max<size_t>(1, screened.size() * 3);
-    for (size_t round = 0; round < 3 && !screened.empty(); ++round) {
-        vector<MatchScore> scores;
-        for (const auto& candidate : screened) {
-            if (timer.ms() >= timeMs) break;
-            const auto score = evaluate(candidate.second, slice,
-                saved_rng.x ^ ((round + 1) * 0x9E3779B97F4A7C15ULL));
-            if (score.matchBrands < 0) break;
-            scores.push_back(score);
-        }
-        if (scores.size() != screened.size()) break;
-        for (size_t index = 0; index < scores.size(); ++index) {
-            evidence[index].push_back(scores[index]);
-            cerr << "[kind] stage=verify round=" << round + 1 << " candidate=" << screened[index].second
-                 << " brands=" << scores[index].matchBrands << " dayBrands=" << scores[index].dayBrands
-                 << " balls=" << scores[index].balls << '\n';
-        }
-        size_t winner = 0;
-        for (size_t index = 1; index < scores.size(); ++index)
-            if (kindEvidence(evidence[winner]) < kindEvidence(evidence[index])) winner = index;
-        selected = screened[winner].second;
+    // 総系列が一番多い候補のうち、日別系列の見込みが最大から許容（最大の KIND_DAY_TOLERANCE、最低 1）以内のものに絞り、
+    // その中で補給車が一番少ない台数の候補から、玉が一番多いものを選ぶ。
+    // 種別決めの中の計画は短い（32x32 で 1 日 0.3 秒ほど）ので、補給車が多い案ほど日別系列が高めに出る。
+    // 練習場の 32x32 で、補給車 2 台の見込みが 198、1 台が 194〜196 だったが、対戦させると 1 台でも満点を取り、
+    // 玉は 2 台より 6% 多かった
+    int topBrands = INT_MIN, topDay = INT_MIN;
+    for (auto& [ms, k] : scored) topBrands = max(topBrands, ms.matchBrands);
+    for (auto& [ms, k] : scored) if (ms.matchBrands == topBrands) topDay = max(topDay, ms.dayBrands);
+    const int tolerance = max(1, (int)lround(topDay * KIND_DAY_TOLERANCE));
+    const auto supplies = [](const vector<int>& k) { return (int)count(k.begin(), k.end(), 1); };
+    int fewest = INT_MAX;
+    for (auto& [ms, k] : scored)
+        if (ms.matchBrands == topBrands && ms.dayBrands >= topDay - tolerance) fewest = min(fewest, supplies(k));
+    const pair<MatchScore, vector<int>>* pick = nullptr;
+    for (auto& s : scored) {
+        const MatchScore& ms = s.first;
+        if (ms.matchBrands != topBrands || ms.dayBrands < topDay - tolerance || supplies(s.second) != fewest) continue;
+        if (!pick || tie(ms.balls, ms.dayBrands) > tie(pick->first.balls, pick->first.dayBrands)) pick = &s;
     }
-    cerr << "[kind] selected=" << selected << " rounds=" << (evidence.empty() ? 0 : evidence.front().size())
-         << " elapsedMs=" << timer.ms() << '\n';
-    rng = saved_rng;
-    today = saved_day;
-    choosingKinds = saved_choosing;
-    return candidates[selected];
+    return pick ? pick->second : cands[0];
 }
 
 }  // namespace hexa_udon::solver
