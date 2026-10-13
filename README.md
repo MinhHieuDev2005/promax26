@@ -191,12 +191,12 @@ worker は日の締切の 1 秒前（`--lan-worker-timeout-ms` で上限を指�
 | Session・Recovery・polling・永続化 | `src/session/` |
 # Agent selection
 
-The prematch selector matches upstream commit `8999313` exactly. Candidates
+The prematch selector uses strict score ordering. Candidates
 are evaluated sequentially with the remaining time shared among untested
 lineups. Each runs normal and congested-road simulations: brand counts use
-the worse result, bowl counts use the sum. Among maximum-match-brand lineups,
-allow daily brands within `max(1, lround(bestDailyBrands * 0.015))`, prefer
-fewer supply vehicles, then more bowls, then more daily brands.
+the worse result, bowl counts use the sum. Lineups are ranked lexicographically
+by match brands, daily brands, then bowls. Supply count never overrides score;
+exact ties retain the first evaluated lineup.
 There is no top-three screening or repeated-seed median stage.
 
 The HAUI client window, half-budget selection (about 28.5 seconds when the

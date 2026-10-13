@@ -254,5 +254,6 @@ struct MatchScore {
 // 全チームが同じ動きをすると仮定（交通量 = 自チームの滞在数）して全日程を回す
 MatchScore simulateMatch(const vector<int>& kinds, double timeMs, bool busy = false);
 vector<int> solveKind(double timeMs);
+vector<int> selectKind(const vector<pair<MatchScore, vector<int>>>& scored);
 
 }  // namespace hexa_udon::solver

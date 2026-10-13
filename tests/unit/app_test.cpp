@@ -96,22 +96,28 @@ int main() {
             std::stoi(line.substr(line.find("dayBrands=") + 10)),
             std::stoi(line.substr(line.find("balls=") + 6))});
     }
-    int bestBrands = -1, bestDaily = -1;
-    for (const auto& candidate : candidates) bestBrands = std::max(bestBrands, candidate.brands);
-    for (const auto& candidate : candidates)
-        if (candidate.brands == bestBrands) bestDaily = std::max(bestDaily, candidate.daily);
-    const int tolerance = std::max(1, static_cast<int>(std::lround(bestDaily * 0.015)));
     const Candidate* expected = nullptr;
     const auto priority = [](const Candidate& candidate) {
-        return std::tuple{-std::count(candidate.kinds.begin(), candidate.kinds.end(), '1'),
-                          candidate.balls, candidate.daily};
+        return std::tuple{candidate.brands, candidate.daily, candidate.balls};
     };
     for (const auto& candidate : candidates) {
-        if (candidate.brands != bestBrands || candidate.daily < bestDaily - tolerance) continue;
         if (!expected || priority(candidate) > priority(*expected)) expected = &candidate;
     }
     std::string actual;
     for (const int kind : kinds) actual += std::to_string(kind);
     if (!expected || actual != expected->kinds) return 118;
+    if (solver::selectKind({{{3, 12, 60}, {0, 1, 0}}, {{3, 12, 62}, {0, 0, 1}},
+                            {{3, 12, 62}, {1, 0, 0}}, {{3, 11, 54}, {0, 0, 0}}})
+        != std::vector<int>{0, 0, 1}) return 119;
+    if (solver::selectKind({{{3, 11, 100}, {0, 0, 0}}, {{3, 12, 60}, {0, 1, 0}}})
+        != std::vector<int>{0, 1, 0}) return 120;
+    if (solver::selectKind({{{2, 12, 100}, {0, 0, 0}}, {{3, 10, 20}, {0, 1, 0}}})
+        != std::vector<int>{0, 1, 0}) return 121;
+    if (solver::selectKind({{{3, 12, 60}, {0, 0, 0}}, {{3, 12, 62}, {0, 1, 0}}})
+        != std::vector<int>{0, 1, 0}) return 122;
+    try {
+        solver::selectKind({});
+        return 123;
+    } catch (const std::invalid_argument&) {}
     return 0;
 }
