@@ -885,7 +885,7 @@ RunResult AutoCompetitionClient::run() {
                 deadline.stop_at - clock_.now()).count();
             // procon2026 の solver と同じく残り時間の 85% を計画に使う
             const auto plan = solver::planDay(solver::agentsOf(day_state.own_agents), solver::statusOf(day_state.traffic),
-                                            std::vector<char>(solver::B, 0), steps, day_state.day == total_days - 1,
+                                            solver::collectedBrands(previous_progress.acquired_brands), steps, day_state.day == total_days - 1,
                                             static_cast<double>(std::max<std::int64_t>(0, remaining_ms)) * 0.85);
             solver::interimSink = nullptr;
             const auto local = simulator::simulate_day(sim_input, solver::toActionPlan(plan));

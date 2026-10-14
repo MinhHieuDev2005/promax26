@@ -24,6 +24,7 @@
 #include <queue>
 #include <set>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <tuple>
@@ -99,6 +100,7 @@ void loadMap(const core::MapDefinition& map, span<const core::Spot> mapSpots, in
 void loadProblem(const core::MatchConfig& match);
 vector<Agent> agentsOf(const vector<core::AgentState>& agents);
 vector<int> statusOf(const vector<core::TrafficState>& traffic);
+vector<char> collectedBrands(const set<core::Quantity>& brands);
 simulator::DayActionPlan toActionPlan(const vector<vector<int>>& plan);
 vector<vector<int>> fromActionPlan(const simulator::DayActionPlan& plan);
 
@@ -170,6 +172,8 @@ struct Day {
     vector<int> startFuel, startSpot;         // 巡回車ごとの今日使える燃料と、朝に立っているスポット（なければ -1）
     vector<int> startReserved;                // スポットごとの朝に立っている巡回車が取る玉の数
     vector<char> startBrand;
+    vector<char> before;
+    vector<int> brandOrder;
     vector<vector<pair<int, int>>> schedule;  // 補給車ごとの（待機するマス, 離れる時刻）
     vector<vector<Station>> stations;
     vector<const PathTable*> fastMemo, cheapMemo;
@@ -181,7 +185,7 @@ struct Day {
     vector<int> endReserveMemo;
 
     Day(const vector<Agent>& st_, int steps_, int dayIndex_, Router& r, const vector<int>& patrolIds_,
-        const vector<int>& supplyIds_, const vector<vector<int>>& brandSpots_);
+        const vector<int>& supplyIds_, const vector<vector<int>>& brandSpots_, const vector<char>& before_ = {});
 
     int fuelToKeep(int fuel) const;
 

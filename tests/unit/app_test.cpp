@@ -119,5 +119,41 @@ int main() {
         solver::selectKind({});
         return 123;
     } catch (const std::invalid_argument&) {}
+    if (solver::collectedBrands({7}) != std::vector<char>{1, 0}) return 124;
+    if (solver::collectedBrands({7, 11, 999}) != std::vector<char>{1, 1}) return 125;
+    const std::vector<solver::Agent> history_agents{{0, 0, 20}, {1, 2, 20}, {1, 1, 20}};
+    const std::vector<int> history_patrols{0}, history_supplies{1, 2};
+    std::vector<std::vector<int>> history_spots(solver::B);
+    for (int spot = 0; spot < solver::S; ++spot) history_spots[solver::spots[spot].brand].push_back(spot);
+    solver::Router history_router(std::vector<int>(solver::NC, 0));
+    solver::Day history_day(history_agents, 40, solver::D - 1, history_router,
+                            history_patrols, history_supplies, history_spots, {1, 0});
+    solver::Day collected_day(history_agents, 40, solver::D - 1, history_router,
+                              history_patrols, history_supplies, history_spots, {1, 1});
+    history_day.setSchedule({{{2, INT_MAX}}, {{1, INT_MAX}}});
+    collected_day.setSchedule({{{2, INT_MAX}}, {{1, INT_MAX}}});
+    const auto old_brand = history_day.evaluate({{0}});
+    const auto new_brand = history_day.evaluate({{1}});
+    if (old_brand.score < -1e17 || new_brand.score < -1e17) return 126;
+    if (new_brand.score <= old_brand.score + solver::E_BRAND * solver::B * solver::D) return 127;
+    if (old_brand.score != collected_day.evaluate({{0}}).score) return 128;
+    for (const auto& invalid_history : {std::vector<char>{}, std::vector<char>{0}, std::vector<char>{0, 2}}) {
+        try {
+            solver::planDay(history_agents, std::vector<int>(solver::NC, 0), invalid_history, 40, true, 1.0);
+            return 129;
+        } catch (const std::invalid_argument&) {}
+    }
+    const core::MatchConfig priority_match{0, {60, 60}, {2, 2}, map,
+        {{7, {1}, 1}, {11, {8}, 1}}, {{0}}, 20, 1, 1, 2};
+    solver::loadProblem(priority_match);
+    solver::today = 1;
+    solver::threads = 1;
+    const std::vector<solver::Agent> priority_agents{{0, 0, 20}};
+    const std::vector<int> priority_status(solver::NC, 0);
+    const auto priority_plan = solver::planDay(priority_agents, priority_status,
+        solver::collectedBrands({7}), 2, true, 10.0);
+    const auto priority_result = solver::simulateDay(priority_agents, priority_plan, priority_status, 2);
+    if (!priority_result.valid || priority_result.balls != 1
+        || !priority_result.brandHit[1] || priority_result.brandHit[0]) return 130;
     return 0;
 }

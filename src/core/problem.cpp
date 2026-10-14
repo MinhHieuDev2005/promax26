@@ -68,6 +68,12 @@ vector<Agent> agentsOf(const vector<core::AgentState>& agents) {
     return st;
 }
 
+vector<char> collectedBrands(const set<core::Quantity>& brands) {
+    vector<char> before(B, 0);
+    for (int brand = 0; brand < B; ++brand) before[brand] = brands.contains(rawBrand[brand]);
+    return before;
+}
+
 vector<int> statusOf(const vector<core::TrafficState>& traffic) {
     vector<int> st(NC, 0);
     for (const auto& t : traffic) st[t.position.value] = core::to_int(t.status);

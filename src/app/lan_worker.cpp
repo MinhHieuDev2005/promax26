@@ -522,7 +522,7 @@ int run_lan_worker(const LanWorkerConfig& config, const std::function<bool()>& s
                     const auto steps = decoded->match.day_steps.at(static_cast<std::size_t>(decoded->daily.day));
                     const auto budget_ms = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now()).count();
                     const auto planned = m::planDay(m::agentsOf(decoded->daily.own_agents), m::statusOf(decoded->daily.traffic),
-                                                    std::vector<char>(m::B, 0), steps,
+                                                    m::collectedBrands(decoded->progress.acquired_brands), steps,
                                                     decoded->daily.day + 1 == static_cast<core::Quantity>(decoded->match.day_steps.size()),
                                                     static_cast<double>(std::max<std::int64_t>(0, budget_ms)) * 0.85);
                     const auto plan = m::toActionPlan(planned);

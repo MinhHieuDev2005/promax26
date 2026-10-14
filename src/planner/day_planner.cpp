@@ -4,10 +4,16 @@
 namespace hexa_udon::solver {
 
 Day::Day(const vector<Agent>& st_, int steps_, int dayIndex_, Router& r, const vector<int>& patrolIds_,
-    const vector<int>& supplyIds_, const vector<vector<int>>& brandSpots_)
+    const vector<int>& supplyIds_, const vector<vector<int>>& brandSpots_, const vector<char>& before_)
     : st(st_), steps(steps_), dayIndex(dayIndex_), lastDay(dayIndex_ == D - 1), router(r), patrolIds(patrolIds_),
       supplyIds(supplyIds_), brandSpots(brandSpots_), P(patrolIds_.size()), startReserved(S, 0), startBrand(B, 0),
+      before(before_.empty() ? vector<char>(B, 0) : before_), brandOrder(B),
       fastMemo(NC, nullptr), cheapMemo(NC, nullptr), insertMemo(P), actsMemo(P) {
+    if (before.size() != static_cast<size_t>(B)
+        || any_of(before.begin(), before.end(), [](char value) { return value != 0 && value != 1; }))
+        throw invalid_argument("Invalid collected-brand history");
+    iota(brandOrder.begin(), brandOrder.end(), 0);
+    stable_sort(brandOrder.begin(), brandOrder.end(), [&](int left, int right) { return before[left] < before[right]; });
     for (int i : patrolIds) {
         startFuel.push_back(st[i].fuel - fuelToKeep(st[i].fuel));
         int s = spotAt[st[i].pos];
@@ -249,7 +255,10 @@ vector<vector<int>> Day::assignBrands(int& missing) {
                 else if (in.cost < second.cost) second = in;
             }
             double regret = first.cost == INT_MAX ? 1e18 : second.cost == INT_MAX ? 1e9 : second.cost - first.cost;
-            if (regret > bestRegret) { bestRegret = regret; bi = x; bq = q1; bestIn = first; }
+            if (bi < 0 || before[rest[x]] < before[rest[bi]]
+                || (before[rest[x]] == before[rest[bi]] && regret > bestRegret)) {
+                bestRegret = regret; bi = x; bq = q1; bestIn = first;
+            }
         }
         if (bq < 0) failed.push_back(rest[bi]);
         else routes[bq].insert(routes[bq].begin() + bestIn.pos, bestIn.node);
@@ -321,11 +330,11 @@ bool Day::repair(vector<vector<int>>& routes, const vector<char>& needBrands, bo
             const vector<vector<int>>* prev) {
     for (int pi = 0; pi < P; pi++) if (!prev || (*prev)[pi] != routes[pi]) prune(pi, routes[pi]);
     vector<char> has = brandsOf(routes);
-    for (int b = 0; b < B; b++)
+    for (int b : brandOrder)
         if (needBrands[b] && !has[b] && !insertBrand(b, routes, rng.nextInt(5) == 0)) return false;
     if (tryMissing) {
         has = brandsOf(routes);
-        for (int b = 0; b < B; b++) if (!has[b]) insertBrand(b, routes, false);
+        for (int b : brandOrder) if (!has[b]) insertBrand(b, routes, false);
     }
     routes = fill(routes, noise);
     return true;
@@ -377,6 +386,9 @@ Day::Eval Day::evaluate(const vector<vector<int>>& routes) {
     if (!r.valid) { cerr << "[solver] 不正な計画: " << r.error << "\n"; return e; }
     e.end = r.end;
     double score = E_BRAND * r.brands + r.balls;
+    const double matchWeight = E_BRAND * (1.0 + static_cast<double>(D) * B) + static_cast<double>(D) * NA * S;
+    for (int brand = 0; brand < B; ++brand)
+        if (r.brandHit[brand] && !before[brand]) score += matchWeight;
     long long busy = 0, fuelLeft = 0;
     if (!lastDay) {
         const int need = min(FUEL_LIMIT, daySteps[min(dayIndex + 1, D - 1)]);
