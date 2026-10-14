@@ -36,6 +36,14 @@ if hasattr(sys.stdout, 'reconfigure'):
 ROOT = Path(__file__).resolve().parent
 RUNNER_REGISTRY = ROOT / "solvers" / "registered.json"
 CUSTOM_RUNNERS = {}
+PROCON37_RUNNER = ROOT / "solvers" / "procon37kyogi_runner.py"
+HYBRID_MASTER_RUNNER = ROOT / "build-hybrid-master" / "hybrid_master_runner.exe"
+TARGET503_RUNNER = ROOT / "build-boundary-target503" / "boundary_joint_runner.exe"
+HIEU_521_RUNNER = ROOT / "build-pro26-hieu" / "hexa_udon_hieu_runner_v2.exe"
+BUILTIN_RUNNERS = {"procon37": PROCON37_RUNNER,
+                   "hybrid_master": HYBRID_MASTER_RUNNER,
+                   "target503": TARGET503_RUNNER,
+                   "hieu_521": HIEU_521_RUNNER}
 
 # Tự động tìm HEX_BINARY (ưu tiên bin/, sau đó build/)
 if (ROOT / "bin" / "hexudon.exe").exists():
@@ -56,7 +64,7 @@ else:
 
 DEFAULT_HOST = "procon26.haui.ac.vn"
 DEFAULT_USER = "mhieu"
-DEFAULT_PASS = "Hieu123456@"
+DEFAULT_PASS = "Hieu123456@@@"
 
 ctx = ssl.create_default_context()
 ctx.check_hostname = False
@@ -67,11 +75,15 @@ SOLVERS = {
     "Auto-Race (Chạy đua ACO & ALNS - Khuyên dùng tối ưu)": "auto_race",
     "Auto-Race ALL (Chạy đua TẤT CẢ các Solver cùng lúc)": "auto_race_all",
     "ACO (Bầy kiến + LS - Tốc độ chớp nhoáng)": "aco_ls",
-    "ALNS (Adaptive LNS - Ổn định & Sâu)": "alns",
+    
     "MLNS (Multi-Day LNS + DP Lookahead)": "mlns",
     "Runner EXE (Procon26 / solver thay thế)": "procon26",
+    "Hybrid Japan LNS (Procon37 + SA/LNS)": "procon37",
+    
+    "Target 503+ C++20 (Boundary + Adaptive ALNS)": "target503",
+    "Hieu 521 C++20 (Full 26/156 + LNS/SA)": "hieu_521",
     "LocalSearch (2-Opt / Relocate)": "local_search",
-    "Greedy (Tham lam cơ bản)": "greedy",
+    
 }
 
 # Các đội mẫu trên tài khoản HAUI
@@ -471,7 +483,7 @@ def new_runner_context():
 
 
 def policy_uses_runner_context(policy):
-    return policy == "procon26" or policy == "auto_race_all" or policy in CUSTOM_RUNNERS
+    return policy == "procon26" or policy == "auto_race_all" or policy in BUILTIN_RUNNERS or policy in CUSTOM_RUNNERS
 
 
 def read_server_day(status, default=None):
@@ -621,10 +633,10 @@ def read_custom_runners():
     if not isinstance(entries, dict) or any(
         not name.startswith(("EXE: ", "HTTP: ")) or not name.partition(": ")[2].strip()
         or not isinstance(filename, str) or "\x00" in filename
-        or Path(filename).suffix.lower() != ".exe"
+        or Path(filename).suffix.lower() not in (".exe", ".py")
         for name, filename in entries.items()
     ):
-        raise ValueError("Danh sách solver phải chứa tên EXE: <tên> hoặc HTTP: <tên> và đường dẫn .exe.")
+        raise ValueError("Danh sách solver phải chứa tên EXE: <tên> hoặc HTTP: <tên> và đường dẫn .exe/.py.")
     return {name: (ROOT / filename).resolve() for name, filename in entries.items()}
 
 
@@ -635,8 +647,11 @@ def register_runner(name, filename, transport="json"):
     if not name or len(name) > 100 or any(ord(character) < 32 for character in name):
         raise ValueError("Tên solver cần có 1–100 ký tự, không chứa ký tự điều khiển.")
     executable = Path(filename).resolve()
-    if not executable.is_file() or executable.suffix.lower() != ".exe":
-        raise ValueError("Hãy chọn một file .exe tồn tại.")
+    suffix = executable.suffix.lower()
+    if not executable.is_file() or suffix not in (".exe", ".py"):
+        raise ValueError("Hãy chọn một file .exe hoặc .py tồn tại.")
+    if transport == "http" and suffix != ".exe":
+        raise ValueError("Bot HTTP phải là file .exe; file .py chỉ hỗ trợ Runner JSON.")
     label = f"{'HTTP' if transport == 'http' else 'EXE'}: {name}"
     previous_label = f"{'EXE' if transport == 'http' else 'HTTP'}: {name}"
     entries = read_custom_runners()
@@ -710,11 +725,12 @@ def stop_http_bot(process):
 
 def run_runner(payload, timeout, executable=None, return_response=False):
     executable = (executable if executable is not None else PROCON26_RUNNER).resolve()
-    if not executable.is_file() or executable.suffix.lower() != ".exe":
-        raise RuntimeError(f"Runner .exe not found: {executable}. Select one in Kho Solver.")
+    if not executable.is_file() or executable.suffix.lower() not in (".exe", ".py"):
+        raise RuntimeError(f"Runner .exe/.py not found: {executable}. Select one in Kho Solver.")
+    command = [sys.executable, str(executable)] if executable.suffix.lower() == ".py" else [str(executable)]
     try:
         result = subprocess.run(
-            [str(executable)], input=json.dumps(payload), text=True,
+            command, input=json.dumps(payload), text=True,
             encoding="utf-8", capture_output=True, timeout=timeout, cwd=executable.parent,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
@@ -778,10 +794,12 @@ def solve_roles(policy, map_config, cancelled=None, log_fn=None):
         raise RuntimeError("Not enough time to select and submit agent roles safely.")
     if cancelled and cancelled():
         raise RuntimeError("Role selection cancelled.")
-    if policy == "procon26" or policy in CUSTOM_RUNNERS:
+    if policy == "procon26" or policy in BUILTIN_RUNNERS or policy in CUSTOM_RUNNERS:
         if log_fn:
             log_fn(f"JSON runner role selector: {policy}; timeout={budget:.2f}s.", "INFO")
-        roles = run_runner({"op": "roles", "config": map_config}, timeout=budget, executable=CUSTOM_RUNNERS.get(policy))
+        roles = run_runner({"op": "roles", "config": map_config,
+                            "search": {"timeLimitMs": int(budget * 900)}}, timeout=budget,
+                           executable=BUILTIN_RUNNERS.get(policy, CUSTOM_RUNNERS.get(policy)))
         return validate_roles(roles, len(agents))
     if policy.startswith("auto"):
         policy = "alns"
@@ -1043,12 +1061,12 @@ def solve_plan(policy, map_config, day_info, roles, day_num=1, raw_status=None,
     if policy.startswith("HTTP: "):
         raise ValueError("Bot HTTP tự giải và nộp bài; không dùng được như runner JSON.")
     normalize_map_config(map_config)
-    if policy == "procon26" or policy in CUSTOM_RUNNERS:
+    if policy == "procon26" or policy in BUILTIN_RUNNERS or policy in CUSTOM_RUNNERS:
         payload = build_procon26_payload(map_config, day_info, day_num, raw_status,
                                          runner_context, time_limit_ms)
         pr_timeout = max(2, int(day_budget_sec - 2)) if (day_budget_sec and day_budget_sec > 0) else 30
         response = run_runner(payload, timeout=pr_timeout,
-                              executable=CUSTOM_RUNNERS.get(policy),
+                              executable=BUILTIN_RUNNERS.get(policy, CUSTOM_RUNNERS.get(policy)),
                               return_response=True)
         diagnostics = response.get("diagnostics")
         if log_fn and isinstance(diagnostics, dict):
@@ -2500,14 +2518,18 @@ class HexControlCenter(tk.Tk):
     def add_runner(self):
         if not self.runner_changes_allowed():
             return
-        filename = filedialog.askopenfilename(parent=self, title="Thêm EXE tin cậy", filetypes=[("Executable", "*.exe")])
+        filename = filedialog.askopenfilename(
+            parent=self, title="Thêm solver tin cậy",
+            filetypes=[("Solver", "*.exe *.py"), ("Executable", "*.exe"), ("Python", "*.py")],
+        )
         if not filename:
             return
         name = simpledialog.askstring("Tên solver", "Đặt tên solver mới (nhập tên cũ để thay EXE hoặc đổi kiểu).",
                                       initialvalue=Path(filename).stem, parent=self)
         if name is None:
             return
-        http = messagebox.askyesnocancel("Kiểu EXE", "EXE này có phải Bot HTTP nhận -url, -match, -token?\n\nCó: Bot HTTP (ví dụ bot_v11.exe).\nKhông: Runner JSON roles / plan (ví dụ Procon26).\nHủy: không thêm.", parent=self)
+        http = False if Path(filename).suffix.lower() == ".py" else messagebox.askyesnocancel(
+            "Kiểu solver", "EXE này có phải Bot HTTP nhận -url, -match, -token?\n\nCó: Bot HTTP (ví dụ bot_v11.exe).\nKhông: Runner JSON roles / plan (ví dụ Procon26).\nHủy: không thêm.", parent=self)
         if http is None:
             return
         try:

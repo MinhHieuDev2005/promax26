@@ -1,0 +1,20 @@
+{
+  "gui.py": "8943a90e194a87e843bf9d669bb2862234f7fd9204cf579c99138a0c99f0f6f3",
+  "src\\aco.cpp": "69470797226c8fbf04cb7f23801895a805b75316bb1b14647bc1c11ca2258b67",
+  "src\\bp.cpp": "073ddd68f32d6dd0a5719eb05d963972a91ea3403577c833542530d98ccf3e72",
+  "src\\core.cpp": "fc0e7a73b1492bc0f1be4f783c474bd7cfb6dadacb53d3eabb12fb970473578a",
+  "src\\lns.cpp": "d77914c88205463fd4a6d61234c682d15294166888bcc4a147f92905a71232d6",
+  "src\\lns_dp.cpp": "a740ba7787418c842739ca167db22a2c2901563bd93b38b9d1672aa779abcf9d",
+  "src\\local_search.cpp": "10c58da736de334a8ac7748b8d90f9699ef09962350508cbf091d663ece0da53",
+  "src\\main.cpp": "78025b306d7059dd6c37375e7f3dc19a0ce6d3c3816c85a2d9348922469d5755",
+  "src\\simple_lns.cpp": "89dd01a244e3c8ce87f6adea0499e9b1b13e84b762087e3d97a86142347ddff3",
+  "include\\cxxopts\\cxxopts.hpp": "36ff033be4cf8ede79e90200ff21a174490a4ed7205090cb7fb46b59e4c3d730",
+  "include\\hexudon\\core.hpp": "ea6c35e7c9faa0295a70fbe143e76a4c52e9a6ad772a4e63607e18e5fa20ac6a",
+  "include\\hexudon\\internal.hpp": "7bee438fb7aaf9f203e0a7495b13c0a87055f1a9efafc5e825528f9355fe4181",
+  "solvers\\boundary_pool\\boundary_search.hpp": "69789380dc4da19af71af3cae430f18c5628df2daea4817cc3d3effc79578290",
+  "solvers\\boundary_pool\\config.hpp": "a46622b6f579f15bd08c3509676d9171a030ddbb1a6467c1da8cd943ece10835",
+  "solvers\\boundary_pool\\main.cpp": "bc4c14c6f2393dab5aea61ae73b9f07a4fddb7abea5e4d367f4404d7bb3f47de",
+  "solvers\\boundary_pool\\route_pool.hpp": "dc6b17e99e723c5d5e00770134e4a321fad6d1a47f6a0fabbcb426d4e758e3a3",
+  "solvers\\boundary_pool\\tests.cpp": "0aa137a8054da2b50e0818853ad22229be2511bdfee0e4b68033421c08437f6f",
+  "solvers\\short_day\\main.cpp": "e3dabdd5957d368da64c8ee3c7e0462056f8658a23f1495806197ccf35b0b7f6"
+}

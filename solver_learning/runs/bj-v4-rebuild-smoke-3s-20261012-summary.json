@@ -1,0 +1,35 @@
+{
+  "solver_exports\\validated_improvements_2026-09-30\\h24_profile\\cases\\user-input-16x16.json": {
+    "n": 1,
+    "mean": 93,
+    "median": 93,
+    "min": 93,
+    "max": 93,
+    "stddev": 0.0,
+    "invalid": 0,
+    "coverage_failures": 0,
+    "deadline_failures": 0
+  },
+  "solver_exports\\validated_improvements_2026-09-30\\h24_profile\\cases\\user-input-24x24.json": {
+    "n": 1,
+    "mean": 217,
+    "median": 217,
+    "min": 217,
+    "max": 217,
+    "stddev": 0.0,
+    "invalid": 0,
+    "coverage_failures": 0,
+    "deadline_failures": 0
+  },
+  "solver_exports\\validated_improvements_2026-09-30\\h24_profile\\cases\\user-input-32x32.json": {
+    "n": 1,
+    "mean": 244,
+    "median": 244,
+    "min": 244,
+    "max": 244,
+    "stddev": 0.0,
+    "invalid": 0,
+    "coverage_failures": 0,
+    "deadline_failures": 0
+  }
+}

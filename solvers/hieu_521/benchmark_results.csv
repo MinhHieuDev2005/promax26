@@ -1,0 +1,4 @@
+variant,mode,traffic,budget_ms_per_day,threads,distinct_types,cumulative_types,total_udon,wall_ms,valid_days,illegal_plans
+hieu_v2_corrected,OFFICIAL_LEXICOGRAPHIC,idle,45000,8,26,156,520,249155.018,6,0
+seeded_s1,OFFICIAL_LEXICOGRAPHIC,idle,45000,8,26,156,522,249323.798,6,0
+tail_repair_s1,OFFICIAL_LEXICOGRAPHIC,idle,45000,8,26,156,518,249801.165,6,0

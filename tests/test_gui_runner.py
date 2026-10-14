@@ -10,6 +10,22 @@ import gui
 
 
 class RunnerTests(unittest.TestCase):
+    def test_python_json_runner_can_be_registered_and_launched(self):
+        with tempfile.TemporaryDirectory() as directory:
+            registry = Path(directory) / "registered.json"
+            runner = Path(directory) / "solver.py"
+            runner.touch()
+            with patch.object(gui, "RUNNER_REGISTRY", registry), \
+                    patch.dict(gui.CUSTOM_RUNNERS, {}, clear=True), patch.dict(gui.SOLVERS):
+                label = gui.register_runner("Python", runner)
+                self.assertEqual(gui.read_custom_runners(), {label: runner.resolve()})
+                with self.assertRaisesRegex(ValueError, "Bot HTTP"):
+                    gui.register_runner("Python", runner, "http")
+                with patch.object(gui.subprocess, "run") as run:
+                    run.return_value = subprocess.CompletedProcess([], 0, '{"ok":true,"roles":[0]}', "")
+                    self.assertEqual(gui.run_runner({"op": "roles", "config": {"agents": [0]}}, 3, runner), [0])
+                    self.assertEqual(run.call_args.args[0], [gui.sys.executable, str(runner.resolve())])
+
     def test_http_registration_replaces_json_mode_and_survives_reload(self):
         with tempfile.TemporaryDirectory() as directory:
             registry = Path(directory) / "registered.json"

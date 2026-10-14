@@ -35,6 +35,20 @@ int main() {
   auto encoded=root.at(root.contains("day_info")?"day_info":"state");
   if(!root.contains("day_info"))encoded.as_object()["day"]=encoded.as_object().at("day").to_number<int>()-1;
   auto day=parse_day_info(encoded);auto history=root.if_contains("history")?parse_history(root.at("history")):PolicyHistory{};
+  const bool target503_mode = integer("target503Mode",1) != 0;
+  static constexpr std::array<int,6> target503_bucket_schedule{8,6,8,6,6,4};
+  const int scheduled_buckets = day.day>=0 && day.day<int(target503_bucket_schedule.size())
+      ? target503_bucket_schedule[std::size_t(day.day)] : 0;
+  const int objective_brand_buckets = std::clamp(
+      integer("objectiveBrandBuckets",target503_mode?scheduled_buckets:0),0,64);
+  if(objective_brand_buckets>0) {
+    for(auto& spot:config.spots)
+      spot.brand=((spot.brand%objective_brand_buckets)+objective_brand_buckets)%objective_brand_buckets;
+    std::set<int> mapped;
+    for(int brand:history.distinct_brands)
+      mapped.insert(((brand%objective_brand_buckets)+objective_brand_buckets)%objective_brand_buckets);
+    history.distinct_brands=std::move(mapped);
+  }
   if(day.day<0 || day.day>=int(config.day_steps.size()) || day.agents.size()!=config.agents.size())throw std::runtime_error("invalid day/agents");
   if(day.ends_at) {
     double now=std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -44,14 +58,37 @@ int main() {
   auto left=[&]{return int(std::chrono::duration_cast<std::chrono::milliseconds>(deadline-Clock::now()).count());};
   AgentTypes types;for(auto a:day.agents)types.push_back(a.kind);
   std::set<int> brands;for(auto s:config.spots)brands.insert(s.brand);int required=int(brands.size());
+  bool has_next=day.day+1<int(config.day_steps.size());
+  const int boundary_trade_percent = std::clamp(
+      integer("boundaryTradePercent",target503_mode?90:80), 0, 100);
+  const bool boundary_trade_always = integer("boundaryTradeAlways",0) != 0;
+  bool boundary_trade=has_next && integer("boundaryTrade",1) &&
+      (boundary_trade_always ||
+       config.day_steps[day.day+1]*100 <
+           config.day_steps[day.day]*boundary_trade_percent);
   auto generate=[&](const DayInfo& d,const PolicyHistory& h,int ms,int s) {
     SearchLimits l;l.time_limit_ms=std::max(1,std::min(ms,left()));l.random_seed=s;
     l.min_iterations=0;l.max_iterations=1000000;l.stagnation_iterations=0;
     return plan_day(text_option("policy","alns"),config,d,h,types,l);
   };
-  auto baseline=generate(day,history,std::min(integer("baselineMs",8000),std::max(1,left()/2)),seed);
+  const int baseline_starts = boundary_trade
+      ? std::clamp(integer("boundaryBaselineStarts",1),1,4)
+      : std::clamp(integer("baselineStarts",1),1,4);
+  ActionPlan baseline;
+  std::optional<CandidateEvaluation> base;
+  std::vector<Candidate> restart_candidates;
+  for(int start=0;start<baseline_starts && left()>1000;++start) {
+    auto proposal=generate(day,history,
+        std::min(integer("baselineMs",8000),std::max(1,left()/(baseline_starts-start))),
+        seed+int(std::uint32_t(start)*0x9e3779b9U));
+    auto evaluation=evaluate_candidate(config,day,history,proposal);
+    if(evaluation)restart_candidates.push_back(
+        {proposal,*evaluation,"alns_restart_"+std::to_string(start)});
+    if(evaluation && (!base || evaluation->value>base->value)) {
+      baseline=std::move(proposal);base=std::move(evaluation);
+    }
+  }
   auto baseline_done=Clock::now();
-  auto base=evaluate_candidate(config,day,history,baseline);
   if(!base)throw std::runtime_error("ALNS returned invalid plan");
   auto cfg=root.at("config").as_object();cfg.erase("startsAt");auto fingerprint=json::serialize(cfg);
   if(auto w=root.if_contains("planner_state");w && w->is_object())try {
@@ -63,20 +100,25 @@ int main() {
     }
   }catch(const std::exception&){}
   std::vector<Candidate> candidates{{baseline,*base,"alns"}};
+  for(auto& candidate:restart_candidates)
+    if(candidate.plan!=baseline)candidates.push_back(std::move(candidate));
   Stats stats;
   const auto profile=configuration(config.width*config.height);
-  bool has_next=day.day+1<int(config.day_steps.size());
-  bool boundary_trade=has_next && config.day_steps[day.day+1]*5<config.day_steps[day.day]*4 && integer("boundaryTrade",1);
+  const int subset_target_limit =
+      std::clamp(integer("subsetTargetLimit",profile.subset_target_limit),
+                 profile.subset_target_limit,64);
   // Reserve enough time to test endpoint changes against their next-day cost.
   int reserve=has_next?13000:1000;
   const int endpoint_quota=std::clamp(integer("endpointQuota",3),0,6);
-  const int bowl_slack=boundary_trade?std::clamp(integer("bowlSlack",1),0,2):0;
-  if(left()>reserve+2000 && integer("enablePool",1) && int(config.spots.size())<=profile.subset_target_limit) {
+  const int bowl_slack=boundary_trade?std::clamp(
+      integer("bowlSlack",target503_mode?2:1),0,2):0;
+  if(left()>reserve+2000 && integer("enablePool",1) &&
+     int(config.spots.size())<=subset_target_limit) {
     auto pool_deadline=deadline-std::chrono::milliseconds(reserve);
     candidates=improve(config,day,history,baseline,pool_deadline,stats,std::clamp(integer("poolCapacity",profile.route_capacity),8,128),boundary_trade,endpoint_quota,bowl_slack);
   }
   BoundaryStats boundary_stats;
-  if(boundary_trade && integer("enableBoundarySearch",0) && left()>14000) {
+  if(boundary_trade && integer("enableBoundarySearch",target503_mode?1:0) && left()>14000) {
     auto until=std::min(deadline-std::chrono::milliseconds(12000),Clock::now()+std::chrono::milliseconds(1800));
     auto tails=boundary_search(config,day,history,{baseline,*base,"alns"},until,boundary_stats);
     std::stable_sort(tails.begin(),tails.end(),[](const auto& a,const auto& b){return a.eval.value>b.eval.value;});
@@ -185,8 +227,13 @@ int main() {
   if(!next_plan.empty())state=json::object{{"fingerprint",fingerprint},{"source_day",day.day},{"committed",to_json(winner.plan)},{"next_plan",to_json(next_plan)}};
   std::cout<<json::serialize(json::object{{"ok",true},{"plan",to_json(winner.plan)},{"planner_state",state},
     {"diagnostics",json::object{{"engine","boundary_joint_v3"},{"selected",winner.origin},{"boundary_trade",boundary_trade},
-    {"profile",profile.profile},{"subset_target_limit",profile.subset_target_limit},
+    {"profile",profile.profile},{"subset_target_limit",subset_target_limit},
     {"endpoint_quota",endpoint_quota},{"bowl_slack",bowl_slack},
+    {"boundary_trade_percent",boundary_trade_percent},
+    {"boundary_trade_always",boundary_trade_always},
+    {"objective_brand_buckets",objective_brand_buckets},
+    {"target503_mode",target503_mode},
+    {"baseline_starts",baseline_starts},
     {"extra_endpoints",stats.extra_endpoints},{"slack_candidates",stats.slack_candidates},
     {"coverage_complete",std::get<0>(winner.eval.value)==required && std::get<1>(winner.eval.value)==required},
     {"labels",stats.labels},{"transitions",stats.transitions},{"route_count",stats.route_count},
