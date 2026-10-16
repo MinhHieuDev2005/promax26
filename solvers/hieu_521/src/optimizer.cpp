@@ -2,10 +2,28 @@
 #include "hexa_udon/solver.hpp"
 #include <atomic>
 #include "cross_routes.hpp"
+#include "../stock_presence.hpp"
 
 namespace hexa_udon::solver {
 
 double ducFutureWeight = 0.0;
+// Negative means adaptive: end-position guidance is useful before a changing
+// horizon, but becomes a misleading surrogate on a flat repeated tail.
+double ducEndSpotWeight = -1.0;
+double ducTerminalAccessWeight = 0.0;
+bool ducStockRepair = false;
+bool ducMarginalStock = false;
+bool ducPathStock = false;
+bool ducMobileForecast = false;
+bool ducIdleForecast = false;
+bool ducActualRuin = false;
+bool ducBoundarySelect = false;
+bool ducClusterRuin = false;
+bool ducDirectStockInsert = false;
+bool ducTwoDaySelect = false;
+bool ducHardFullMax = false;
+bool ducDualHubSeeds = false;
+bool ducStockBuildSeeds = false;
 int ducCrossMoves = 0;
 bool ducMaxTotal = false;
 std::atomic<std::uint64_t> ducIterations{0}, ducEvaluated{0}, ducValid{0};
@@ -18,6 +36,7 @@ struct Planner {
     Router router;
     Router heavyRouter;
     static vector<int> predicted(const vector<int>& status) {
+        if (ducIdleForecast) return status;
         vector<int> out = status;
         if (today == 0) {
             for (int c = 0; c < NC; c++) if (cellType[c] == ROAD) out[c] = max(out[c], 1);
@@ -103,7 +122,29 @@ struct Planner {
             auto routes = next.fill(next.assignBrands(missing), 0.0);
             auto evaluation = next.evaluate(routes);
             auto simulated = simulateDay(end, evaluation.plan, router.status, daySteps[today + 1]);
-            const int balls = simulated.valid ? simulated.balls : 0;
+            int balls = simulated.valid ? simulated.balls : 0;
+            int brands = simulated.valid ? simulated.brands : 0;
+            // Rebuild patrol routes together with a relocated supply hub.
+            // Forecast only: this never substitutes for actual next-day validation.
+            if (ducMobileForecast && !supplies.empty()) {
+                vector<pair<int,int>> hubs;
+                for (int spot=0; spot<S; ++spot) {
+                    int distance=router.get(end[supplies.front()].pos,0).t[spots[spot].pos];
+                    if (distance!=INT_MAX) hubs.push_back({distance,spots[spot].pos});
+                }
+                sort(hubs.begin(),hubs.end());
+                for (size_t h=0; h<min<size_t>(3,hubs.size()); ++h) {
+                    auto alternative=schedule;
+                    alternative[0]={{hubs[h].second,INT_MAX}};
+                    next.setSchedule(alternative);
+                    int misses=0;
+                    auto trial=next.fill(next.assignBrands(misses),0.0);
+                    auto result=simulateDay(end,next.toPlan(trial),router.status,daySteps[today+1]);
+                    if (result.valid && make_pair(result.brands,result.balls)>make_pair(brands,balls)) {
+                        brands=result.brands; balls=result.balls;
+                    }
+                }
+            }
             if (tomorrowBallsMemo.size() >= 2048) tomorrowBallsMemo.clear();
             cached = tomorrowBallsMemo.emplace(std::move(key), balls).first;
         }
@@ -143,6 +184,28 @@ struct Planner {
         vector<vector<pair<int, int>>> base;
         for (int j : supplies) base.push_back({{st[j].pos, INT_MAX}});
         out.push_back(base);
+        if (ducDualHubSeeds && !supplies.empty()) {
+            const int shortlist=min<int>(8,order.size());
+            struct Pair { double key; int first,second; };
+            vector<Pair> pairs;
+            for (int x=0;x<shortlist;++x) for (int y=x+1;y<shortlist;++y) {
+                const int a=order[x],b=order[y];
+                const int travel=router.get(spots[a].pos,0).t[spots[b].pos];
+                if (travel==INT_MAX || travel>steps*2/3) continue;
+                pairs.push_back({density[a]+density[b]+0.02*travel,a,b});
+            }
+            sort(pairs.begin(),pairs.end(),[](auto a,auto b){return a.key>b.key;});
+            if (pairs.size()>12) pairs.resize(12);
+            for (auto pair:pairs) {
+                for (int reverseOrder=0;reverseOrder<2;++reverseOrder) {
+                    auto schedule=base;
+                    const int a=reverseOrder?pair.second:pair.first;
+                    const int b=reverseOrder?pair.first:pair.second;
+                    schedule[0]={{spots[a].pos,steps/2},{spots[b].pos,INT_MAX}};
+                    out.push_back(std::move(schedule));
+                }
+            }
+        }
         for (size_t j = 0; j < supplies.size(); j++)
             for (int c : cells) {
                 if (c == st[supplies[j]].pos) continue;
@@ -164,6 +227,50 @@ struct Planner {
         s.score = total(e);
         s.plan = e.plan;
         s.lasting = lastingTotal(e);
+        if (ducStockBuildSeeds) {
+            vector<int> order(S);
+            iota(order.begin(),order.end(),0);
+            sort(order.begin(),order.end(),[&](int a,int b) {
+                if (spots[a].stock!=spots[b].stock) return spots[a].stock>spots[b].stock;
+                int da=INT_MAX,db=INT_MAX;
+                for (int patrol:patrols) {
+                    da=min(da,router.get(st[patrol].pos,0).t[spots[a].pos]);
+                    db=min(db,router.get(st[patrol].pos,0).t[spots[b].pos]);
+                }
+                return da>db;
+            });
+            const int limit=min<int>(6,order.size());
+            vector<vector<int>> seedSets;
+            for (int i=0;i<limit;++i) seedSets.push_back({order[i]});
+            for (int i=0;i<limit;++i) for (int j=i+1;j<limit;++j)
+                if (router.get(spots[order[i]].pos,0).t[spots[order[j]].pos]>=steps/3)
+                    seedSets.push_back({order[i],order[j]});
+            if (seedSets.size()>12) seedSets.resize(12);
+            for (const auto& seeds:seedSets) {
+                vector<vector<int>> routes(patrols.size());
+                vector<char> used(patrols.size(),0);
+                for (int spot:seeds) {
+                    const int demand=min(2,spots[spot].stock);
+                    for (int unit=0;unit<demand;++unit) {
+                        pair<int,int> nearest{INT_MAX,-1};
+                        for (int pi=0;pi<(int)patrols.size();++pi) if (!used[pi])
+                            nearest=min(nearest,make_pair(
+                                router.get(st[patrols[pi]].pos,0).t[spots[spot].pos],pi));
+                        if (nearest.first==INT_MAX) break;
+                        used[nearest.second]=1;
+                        routes[nearest.second].push_back(spot);
+                    }
+                }
+                vector<char> required(B,1);
+                if (!day.repair(routes,required,true,0.0,nullptr)) continue;
+                Day::Eval candidate=day.evaluate(routes);
+                const double score=total(candidate);
+                if (score>s.score) {
+                    s.routes=std::move(routes); s.score=score;
+                    s.plan=std::move(candidate.plan); s.lasting=lastingTotal(candidate);
+                }
+            }
+        }
         return s;
     }
 
@@ -296,12 +403,149 @@ struct Planner {
             if (ducCrossMoves & 2) enabledOps.push_back(10);
             int op = enabledOps[rng.nextInt(enabledOps.size())];
             // しばらく一番良い解が更新されなければ、一番良い解から巡回車 2 台ぶんを壊してやり直す
-            if (tm.ms() - lastBest > timeMs * 0.15) {
+            if (tm.ms() - lastBest > timeMs * (ducClusterRuin ? 0.07 : 0.15)) {
                 cur = best;
                 curScore = bestRaw;
                 next = cur.routes;
                 sch = cur.schedule;
-                for (int x = 0; x < 2 && !next.empty(); x++) next[rng.nextInt(next.size())].clear();
+                bool targeted = false;
+                if ((ducCrossMoves & 4) && !next.empty()) {
+                    auto reserved = day.reservedOf(next);
+                    vector<vector<char>> seen;
+                    if (ducActualRuin) {
+                        reserved.assign(S,0);
+                        for (int pi=0;pi<(int)next.size();++pi) {
+                            seen.push_back(duc::stock_presence(st[patrols[pi]].pos,cur.plan[patrols[pi]],router.status));
+                            for (int spot=0;spot<S;++spot) reserved[spot]+=seen.back()[spot];
+                        }
+                    }
+                    int target = -1, bestTargetScore = -1;
+                    for (int s = 0; s < S; ++s) {
+                        const int missing = spots[s].stock - reserved[s];
+                        if (missing <= 0) continue;
+                        vector<int> distances;
+                        for (int pi = 0; pi < (int)next.size(); ++pi) {
+                            if (ducActualRuin && seen[pi][s]) continue;
+                            const int distance = router.get(st[patrols[pi]].pos, 0).t[spots[s].pos];
+                            if (distance != INT_MAX) distances.push_back(distance);
+                        }
+                        if (distances.empty()) continue;
+                        sort(distances.begin(), distances.end());
+                        const int difficulty = distances[min<int>(missing - 1, distances.size() - 1)];
+                        const int targetScore = missing * 100000 + difficulty;
+                        if (targetScore > bestTargetScore) {
+                            target = s;
+                            bestTargetScore = targetScore;
+                        }
+                    }
+                    if (target >= 0) {
+                        const int mostMissing = spots[target].stock - reserved[target];
+                        if (ducDirectStockInsert) {
+                            int inserted=0;
+                            for (int unit=0;unit<min(2,mostMissing);++unit) {
+                                Insertion bestInsertion;
+                                int bestPatrol=-1;
+                                for (int pi=0;pi<(int)next.size();++pi) {
+                                    if (!seen.empty() && seen[pi][target]) continue;
+                                    auto insertion=day.cheapestSpot(pi,next[pi],vector<int>{target},
+                                        day.inRouteOf(next[pi]),reserved);
+                                    if (insertion.cost<bestInsertion.cost) {
+                                        bestInsertion=insertion;
+                                        bestPatrol=pi;
+                                    }
+                                }
+                                if (bestPatrol<0 || bestInsertion.cost==INT_MAX) break;
+                                next[bestPatrol].insert(next[bestPatrol].begin()+bestInsertion.pos,target);
+                                reserved[target]++;
+                                if (!seen.empty()) seen[bestPatrol][target]=1;
+                                ++inserted;
+                            }
+                            targeted=inserted>0;
+                        }
+                        if (targeted) {
+                            // Keep current refueling schedule and every existing visit.
+                        } else {
+                        if (!sch.empty()) {
+                            const int supply = rng.nextInt(sch.size());
+                            if (ducActualRuin && !sch[supply].empty()) {
+                                // Retain early refill hub, then move toward missing stock.
+                                sch[supply].resize(1);
+                                sch[supply][0].second=steps/2;
+                                sch[supply].push_back({spots[target].pos,INT_MAX});
+                                for (auto& route:next)
+                                    route.erase(remove_if(route.begin(),route.end(),[&](int v) {
+                                        return isRefuel(v) && v!=refuelNode(supply,0);
+                                    }),route.end());
+                            } else {
+                                sch[supply] = {{spots[target].pos, INT_MAX}};
+                                for (auto& route : next)
+                                    route.erase(remove_if(route.begin(), route.end(), isRefuel), route.end());
+                            }
+                        }
+                        vector<pair<int, int>> order;
+                        for (int pi = 0; pi < (int)next.size(); ++pi) {
+                            if (ducActualRuin && seen[pi][target]) continue;
+                            // An existing visitor cannot supply another bowl at this spot.
+                            if (ducStockRepair && (st[patrols[pi]].pos == spots[target].pos
+                                || find(next[pi].begin(), next[pi].end(), target) != next[pi].end())) continue;
+                            const auto& pt = router.get(st[patrols[pi]].pos, 0);
+                            order.push_back({pt.t[spots[target].pos], pi});
+                        }
+                        sort(order.begin(), order.end());
+                        int seeded = 0;
+                        for (auto [distance, pi] : order) {
+                            if (distance == INT_MAX || seeded >= min(2, mostMissing)) break;
+                            next[pi] = {target};
+                            ++seeded;
+                        }
+                        targeted = seeded > 0;
+                        }
+                    }
+                    if (ducClusterRuin) {
+                        struct Candidate { int score, spot; };
+                        vector<Candidate> candidates;
+                        for (int s=0;s<S;++s) {
+                            int missing=spots[s].stock-reserved[s];
+                            if (missing<=0) continue;
+                            int nearest=INT_MAX;
+                            for (int pi=0;pi<(int)next.size();++pi) {
+                                if (!seen.empty() && seen[pi][s]) continue;
+                                nearest=min(nearest,router.get(st[patrols[pi]].pos,0).t[spots[s].pos]);
+                            }
+                            if (nearest!=INT_MAX) candidates.push_back({missing*100000+nearest,s});
+                        }
+                        sort(candidates.begin(),candidates.end(),[](auto a,auto b){ return a.score>b.score; });
+                        vector<int> chosen;
+                        for (auto candidate:candidates) {
+                            bool separated=true;
+                            for (int other:chosen)
+                                if (router.get(spots[other].pos,0).t[spots[candidate.spot].pos]<steps/3)
+                                    separated=false;
+                            if (separated) chosen.push_back(candidate.spot);
+                            if (chosen.size()==2) break;
+                        }
+                        vector<char> used(next.size(),0);
+                        int seeded=0;
+                        for (int s:chosen) {
+                            const int demand=min(2,spots[s].stock-reserved[s]);
+                            for (int unit=0;unit<demand;++unit) {
+                                pair<int,int> bestPatrol{INT_MAX,-1};
+                                for (int pi=0;pi<(int)next.size();++pi) {
+                                    if (used[pi] || (!seen.empty() && seen[pi][s])) continue;
+                                    bestPatrol=min(bestPatrol,make_pair(
+                                        router.get(st[patrols[pi]].pos,0).t[spots[s].pos],pi));
+                                }
+                                if (bestPatrol.first==INT_MAX) break;
+                                used[bestPatrol.second]=1;
+                                next[bestPatrol.second]={s};
+                                ++seeded;
+                            }
+                        }
+                        targeted=seeded>0;
+                    }
+                }
+                if (!targeted)
+                    for (int x = 0; x < 2 && !next.empty(); x++) next[rng.nextInt(next.size())].clear();
                 lastBest = tm.ms();
                 op = 1;
             } else if (!perturb(day, next, sch, op)) continue;
@@ -403,9 +647,61 @@ pair<Planner::Solution, vector<vector<int>>> solveDay(const vector<Agent>& st, c
                            : make_tuple(fresh, simulated.brands, simulated.balls);
     };
     auto bestRank = officialRank(0);
+    auto boundaryRank = [&](int k) {
+        if (!ducBoundarySelect || lastDay) return make_pair(0,0);
+        auto actual=simulateDay(st,plans[k],status,steps);
+        if (!actual.valid) return make_pair(-1,-1);
+        Router forecastRouter(status);
+        vector<int> patrols,supplies;
+        vector<vector<int>> brandSpots(B);
+        for (int i=0;i<NA;++i) (st[i].kind==0?patrols:supplies).push_back(i);
+        for (int s=0;s<S;++s) brandSpots[spots[s].brand].push_back(s);
+        Day next(actual.end,daySteps[today+1],today+1,forecastRouter,patrols,supplies,brandSpots);
+        vector<vector<pair<int,int>>> schedule;
+        for (int i:supplies) schedule.push_back({{actual.end[i].pos,INT_MAX}});
+        auto result=make_pair(-1,-1);
+        vector<int> hubs{-1};
+        if (!supplies.empty()) {
+            vector<pair<int,int>> nearby;
+            const auto& pt=forecastRouter.get(actual.end[supplies[0]].pos,0);
+            for (int s=0;s<S;++s) if (pt.t[spots[s].pos]!=INT_MAX)
+                nearby.push_back({pt.t[spots[s].pos],spots[s].pos});
+            sort(nearby.begin(),nearby.end());
+            for (int j=0;j<min<int>(3,nearby.size());++j) hubs.push_back(nearby[j].second);
+        }
+        // Fair comparisons: identical random stream for each boundary candidate.
+        const auto savedRng=rng;
+        for (int hub:hubs) {
+            rng=savedRng;
+            auto trialSchedule=schedule;
+            if (hub>=0) trialSchedule[0]={{hub,INT_MAX}};
+            next.setSchedule(trialSchedule);
+            int missing=0;
+            auto routes=next.fill(next.assignBrands(missing),0.0);
+            auto predicted=simulateDay(actual.end,next.toPlan(routes),status,daySteps[today+1]);
+            if (predicted.valid) result=max(result,make_pair(predicted.brands,predicted.balls));
+        }
+        rng=savedRng;
+        return result;
+    };
+    vector<optional<pair<int,int>>> boundaryCache(T);
+    auto futureRank=[&](int k) {
+        if (!boundaryCache[k]) boundaryCache[k]=boundaryRank(k);
+        return *boundaryCache[k];
+    };
+    auto twoDayRank=[&](int k) {
+        auto current=officialRank(k);
+        auto future=futureRank(k);
+        return make_tuple(get<0>(current),get<1>(current),get<2>(current)+future.second,
+                          future.first,get<2>(current));
+    };
     for (int k = 1; k < T; k++) {
         auto rank = officialRank(k);
-        if (rank > bestRank || (rank == bestRank && results[k].score > results[bestK].score)) {
+        const bool twoDayBetter=ducTwoDaySelect && twoDayRank(k)>twoDayRank(bestK);
+        const bool tiedBetter=!ducTwoDaySelect && rank==bestRank &&
+            (futureRank(k)>futureRank(bestK) ||
+             (futureRank(k)==futureRank(bestK) && results[k].score>results[bestK].score));
+        if (twoDayBetter || (!ducTwoDaySelect && rank > bestRank) || tiedBetter) {
             bestK = k;
             bestRank = rank;
         }

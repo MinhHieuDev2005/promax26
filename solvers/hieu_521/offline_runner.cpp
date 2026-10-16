@@ -11,10 +11,30 @@
 #ifdef HEXUDON_TARGET530
 #include "tail_repair.hpp"
 #endif
+#ifdef HEXUDON_STOCK_FUEL
+#include "stock_fuel_repair.hpp"
+#include "loop_repair.hpp"
+#include "stock_presence.hpp"
+#endif
 
 #ifdef HEXUDON_LOOKAHEAD
 namespace hexa_udon::solver {
 extern double ducFutureWeight;
+extern double ducEndSpotWeight;
+extern double ducTerminalAccessWeight;
+extern bool ducStockRepair;
+extern bool ducMarginalStock;
+extern bool ducPathStock;
+extern bool ducMobileForecast;
+extern bool ducIdleForecast;
+extern bool ducActualRuin;
+extern bool ducBoundarySelect;
+extern bool ducClusterRuin;
+extern bool ducDirectStockInsert;
+extern bool ducTwoDaySelect;
+extern bool ducHardFullMax;
+extern bool ducDualHubSeeds;
+extern bool ducStockBuildSeeds;
 extern int ducCrossMoves;
 extern bool ducMaxTotal;
 extern std::atomic<std::uint64_t> ducIterations, ducEvaluated, ducValid;
@@ -69,12 +89,29 @@ int main() {
         const auto search = root.value("search", json::object());
 #ifdef HEXUDON_LOOKAHEAD
         solver::ducFutureWeight = std::clamp(search.value("futureWeight", 0.0), 0.0, 1.0);
+        solver::ducEndSpotWeight = std::clamp(search.value("endSpotWeight", -1.0), -1.0, 2.0);
+        solver::ducTerminalAccessWeight = std::clamp(search.value("terminalAccessWeight", 0.0), 0.0, 0.49);
+#ifdef HEXUDON_STOCK_FUEL
+        solver::ducStockRepair = search.value("stockRepair", false);
+        solver::ducMarginalStock = search.value("marginalStock", false);
+        solver::ducPathStock = search.value("pathStock", false);
+        solver::ducMobileForecast = search.value("mobileForecast", false);
+        solver::ducIdleForecast = search.value("idleForecast", false);
+        solver::ducActualRuin = search.value("actualRuin", false);
+        solver::ducBoundarySelect = search.value("boundarySelect", false);
+        solver::ducClusterRuin = search.value("clusterRuin", false);
+        solver::ducDirectStockInsert = search.value("directStockInsert", false);
+        solver::ducTwoDaySelect = search.value("twoDaySelect", false);
+        solver::ducHardFullMax = search.value("hardFullMax", false);
+        solver::ducDualHubSeeds = search.value("dualHubSeeds", false);
+        solver::ducStockBuildSeeds = search.value("stockBuildSeeds", false);
+#endif
 #ifdef HEXUDON_CROSS
-        constexpr int defaultCrossMoves = 3;
+        constexpr int defaultCrossMoves = 7;
 #else
         constexpr int defaultCrossMoves = 0;
 #endif
-        solver::ducCrossMoves = std::clamp(search.value("crossMoves", defaultCrossMoves), 0, 3);
+        solver::ducCrossMoves = std::clamp(search.value("crossMoves", defaultCrossMoves), 0, 7);
         solver::ducMaxTotal = search.value("objectiveMode", std::string{}) == "MAX_TOTAL_UDON";
 #endif
 #ifdef HEXUDON_TARGET530
@@ -107,7 +144,7 @@ int main() {
             for (int b = 0; b < solver::B; ++b)
                 before[b] = std::find(brands.begin(), brands.end(), solver::rawBrand[b]) != brands.end();
         }
-        auto plan = solver::planDay(
+        auto plan = root.contains("replayPlan") ? root.at("replayPlan").get<std::vector<std::vector<int>>>() : solver::planDay(
             solver::agentsOf(state.value().own_agents),
             solver::statusOf(state.value().traffic), before,
             steps, day_index + 1 == static_cast<int>(day_steps.size()),
@@ -124,10 +161,34 @@ int main() {
                 search.value("objectiveMode", std::string{}) == "MAX_TOTAL_UDON", collected);
         }
 #endif
+#ifdef HEXUDON_STOCK_FUEL
+        int terminalChanges = 0;
+        int removedLoopTicks = 0;
+        if (search.value("loopRepair", false))
+            removedLoopTicks = duc::remove_dominated_loops(plan,
+                solver::agentsOf(state.value().own_agents), solver::statusOf(state.value().traffic),
+                steps, time_ms * 0.01, search.value("loopReinvest", false));
+        if (search.value("terminalRollout", false) && !root.contains("replayPlan"))
+            terminalChanges = duc::improve_terminal_state(plan,
+                solver::agentsOf(state.value().own_agents), solver::statusOf(state.value().traffic),
+                steps, time_ms * 0.03);
+#endif
         const auto checked = solver::simulateDay(
             solver::agentsOf(state.value().own_agents), plan,
             solver::statusOf(state.value().traffic), steps);
         if (!checked.valid) throw std::runtime_error(checked.error);
+#ifdef HEXUDON_STOCK_FUEL
+        std::vector<int> stockVisits(solver::S,0);
+        const auto own=solver::agentsOf(state.value().own_agents);
+        for (size_t i=0;i<own.size();++i) if (own[i].kind==0) {
+            auto seen=duc::stock_presence(own[i].pos,plan[i],solver::statusOf(state.value().traffic));
+            for (int spot=0;spot<solver::S;++spot) stockVisits[spot]+=seen[spot];
+        }
+        int presenceBalls=0;
+        for (int spot=0;spot<solver::S;++spot)
+            presenceBalls+=std::min(stockVisits[spot],solver::spots[spot].stock);
+        if (presenceBalls!=checked.balls) throw std::runtime_error("stock presence differs from full simulation");
+#endif
         json response{{"ok", true}, {"plan", plan},
                           {"planner_state", {{"day_index", day_index},
                               {"traffic", solver::statusOf(state.value().traffic)}}},
@@ -144,6 +205,10 @@ int main() {
         response["diagnostics"]["valid_day_evaluations"] = solver::ducValid.load();
         response["diagnostics"]["objective_mode"] = solver::ducMaxTotal ? "MAX_TOTAL_UDON" : "OFFICIAL_LEXICOGRAPHIC";
         response["diagnostics"]["cross_moves"] = solver::ducCrossMoves;
+#endif
+#ifdef HEXUDON_STOCK_FUEL
+        response["diagnostics"]["terminal_changes"] = terminalChanges;
+        response["diagnostics"]["removed_loop_movement_ticks"] = removedLoopTicks;
 #endif
         std::cout << response.dump() << '\n';
     } catch (const std::exception& error) {

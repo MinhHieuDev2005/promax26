@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/procon/pro26/promax26-duc/build-pro26-hieu-history/adapter/cmake_install.cmake",
+		"D:/procon/pro26/promax26-duc/build-pro26-hieu-history/adapter/hieu/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

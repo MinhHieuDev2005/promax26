@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/procon/pro26/promax26-duc/solver_exports/build-promax26-3/adapter/cmake_install.cmake",
+		"D:/procon/pro26/promax26-duc/solver_exports/build-promax26-3/adapter/promax26_3/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

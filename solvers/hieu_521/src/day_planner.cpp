@@ -1,11 +1,28 @@
 // Day: 1 日の解の組み立てと評価（procon2026 の solvers/meet.cpp / common.hpp から移した。処理は元のまま）
 #include "hexa_udon/solver.hpp"
 #include <atomic>
+#include "../stock_presence.hpp"
 
 namespace hexa_udon::solver {
 
 extern bool ducMaxTotal;
+extern bool ducMarginalStock;
+extern bool ducPathStock;
+extern bool ducHardFullMax;
+extern double ducEndSpotWeight;
+extern double ducTerminalAccessWeight;
 extern std::atomic<std::uint64_t> ducEvaluated, ducValid;
+extern vector<char> ducBefore;
+
+static vector<int> brandPriorityOrder() {
+    vector<int> order(B);
+    iota(order.begin(), order.end(), 0);
+    if (ducBefore.size() == static_cast<size_t>(B))
+        stable_sort(order.begin(), order.end(), [](int left, int right) {
+            return ducBefore[left] < ducBefore[right];
+        });
+    return order;
+}
 
 Day::Day(const vector<Agent>& st_, int steps_, int dayIndex_, Router& r, const vector<int>& patrolIds_,
     const vector<int>& supplyIds_, const vector<vector<int>>& brandSpots_)
@@ -253,7 +270,11 @@ vector<vector<int>> Day::assignBrands(int& missing) {
                 else if (in.cost < second.cost) second = in;
             }
             double regret = first.cost == INT_MAX ? 1e18 : second.cost == INT_MAX ? 1e9 : second.cost - first.cost;
-            if (regret > bestRegret) { bestRegret = regret; bi = x; bq = q1; bestIn = first; }
+            const bool unseen = ducBefore.size() == static_cast<size_t>(B) && !ducBefore[rest[x]];
+            const bool bestUnseen = bi >= 0 && ducBefore.size() == static_cast<size_t>(B) && !ducBefore[rest[bi]];
+            if (bi < 0 || unseen > bestUnseen || (unseen == bestUnseen && regret > bestRegret)) {
+                bestRegret = regret; bi = x; bq = q1; bestIn = first;
+            }
         }
         if (bq < 0) failed.push_back(rest[bi]);
         else routes[bq].insert(routes[bq].begin() + bestIn.pos, bestIn.node);
@@ -293,6 +314,19 @@ vector<vector<int>> Day::fill(vector<vector<int>> routes, double noise) {
         }
     };
     for (int pi = 0; pi < P; pi++) refresh(pi);
+    vector<vector<char>> rejected(P, vector<char>(S,0));
+    vector<vector<char>> presence(P);
+    auto refreshPresence=[&]() {
+        auto plan=toPlan(routes);
+        reserved.assign(S,0);
+        for (int pi=0;pi<P;++pi) {
+            presence[pi]=duc::stock_presence(st[patrolIds[pi]].pos,plan[patrolIds[pi]],router.status);
+            for (int s=0;s<S;++s) reserved[s]+=presence[pi][s];
+        }
+    };
+    if (ducPathStock) refreshPresence();
+    DayResult actualBase;
+    if (ducMarginalStock) actualBase=simulateDay(st,toPlan(routes),router.status,steps);
     while (true) {
         Insertion choice;
         int bp = -1;
@@ -300,14 +334,31 @@ vector<vector<int>> Day::fill(vector<vector<int>> routes, double noise) {
         for (int pi = 0; pi < P; pi++)
             for (int s = 0; s < S; s++) {
                 const Insertion& in = (*best[pi])[s];
-                if (in.cost == INT_MAX || reserved[s] >= spots[s].stock) continue;
+                if (ducPathStock && presence[pi][s]) continue;
+                if (in.cost == INT_MAX || reserved[s] >= spots[s].stock || rejected[pi][s]) continue;
                 double key = noise > 0 ? (in.cost + 1) * (1 + noise * rng.nextDouble()) : in.cost;
                 if (key < bestKey) { bestKey = key; choice = in; bp = pi; }
             }
         if (bp < 0) return routes;
+        if (ducMarginalStock && actualBase.valid) {
+            auto trial=routes;
+            trial[bp].insert(trial[bp].begin()+choice.pos,choice.node);
+            auto result=simulateDay(st,toPlan(trial),router.status,steps);
+            bool preserves=result.valid;
+            if (preserves)
+                for (int b=0;b<B;++b)
+                    if (actualBase.brandHit[b] && !result.brandHit[b]) preserves=false;
+            if (!preserves || result.balls<=actualBase.balls) {
+                rejected[bp][choice.node]=1;
+                continue;
+            }
+            actualBase=std::move(result);
+            for (auto& row:rejected) fill_n(row.begin(),S,0);
+        }
         routes[bp].insert(routes[bp].begin() + choice.pos, choice.node);
         reserved[choice.node]++;
         refresh(bp);
+        if (ducPathStock) refreshPresence();
     }
 }
 
@@ -325,11 +376,12 @@ bool Day::repair(vector<vector<int>>& routes, const vector<char>& needBrands, bo
             const vector<vector<int>>* prev) {
     for (int pi = 0; pi < P; pi++) if (!prev || (*prev)[pi] != routes[pi]) prune(pi, routes[pi]);
     vector<char> has = brandsOf(routes);
-    for (int b = 0; b < B; b++)
+    const vector<int> brandOrder = brandPriorityOrder();
+    for (int b : brandOrder)
         if (needBrands[b] && !has[b] && !insertBrand(b, routes, rng.nextInt(5) == 0)) return false;
     if (tryMissing) {
         has = brandsOf(routes);
-        for (int b = 0; b < B; b++) if (!has[b]) insertBrand(b, routes, false);
+        for (int b : brandOrder) if (!has[b]) insertBrand(b, routes, false);
     }
     routes = fill(routes, noise);
     return true;
@@ -382,15 +434,56 @@ Day::Eval Day::evaluate(const vector<vector<int>>& routes) {
     if (!r.valid) { cerr << "[solver] 不正な計画: " << r.error << "\n"; return e; }
     e.end = r.end;
     ducValid.fetch_add(1, std::memory_order_relaxed);
-    double score = (ducMaxTotal ? 0.001 : E_BRAND) * r.brands + r.balls;
+    if (ducHardFullMax && r.brands != B) return e;
+    double score = (ducMaxTotal || ducHardFullMax ? 0.001 : E_BRAND) * r.brands + r.balls;
+    const double matchWeight = E_BRAND * (1.0 + static_cast<double>(D) * B)
+        + static_cast<double>(D) * NA * S;
+    if (!ducMaxTotal && !ducHardFullMax && ducBefore.size() == static_cast<size_t>(B))
+        for (int brand = 0; brand < B; ++brand)
+            if (r.brandHit[brand] && !ducBefore[brand]) score += matchWeight;
     long long busy = 0, fuelLeft = 0;
     if (!lastDay) {
         const int need = min(FUEL_LIMIT, daySteps[min(dayIndex + 1, D - 1)]);
+        double endSpotWeight = ducEndSpotWeight;
+        if (endSpotWeight < 0.0) {
+            const bool flatTail = dayIndex + 1 < D
+                && all_of(daySteps.begin() + dayIndex, daySteps.end(),
+                    [&](int value) { return value == steps; });
+            endSpotWeight = flatTail ? 0.0 : E_END_SPOT;
+        }
         for (int i : patrolIds) {
             fuelLeft += min(r.end[i].fuel, need);
-            if (spotAt[r.end[i].pos] >= 0) score += E_END_SPOT;
+            if (spotAt[r.end[i].pos] >= 0) score += endSpotWeight;
         }
         score += 0.5 * fuelLeft / ((long long)P * FUEL_LIMIT + 1);
+        if (ducTerminalAccessWeight > 0.0) {
+            struct Edge { double value; int patrol, spot; };
+            vector<Edge> edges;
+            int maxStock = 1;
+            for (int s = 0; s < S; ++s) maxStock = max(maxStock, spots[s].stock);
+            for (int pi = 0; pi < (int)patrolIds.size(); ++pi) {
+                const Agent& agent = r.end[patrolIds[pi]];
+                const auto& paths = router.get(agent.pos, 0);
+                for (int s = 0; s < S; ++s) {
+                    const int distance = paths.t[spots[s].pos];
+                    if (distance == INT_MAX || distance > agent.fuel) continue;
+                    edges.push_back({static_cast<double>(spots[s].stock) /
+                        (1.0 + distance), pi, s});
+                }
+            }
+            sort(edges.begin(), edges.end(), [](const Edge& a, const Edge& b) {
+                return a.value > b.value;
+            });
+            vector<char> usedPatrol(patrolIds.size()), usedSpot(S);
+            double access = 0.0;
+            for (const Edge& edge : edges) {
+                if (usedPatrol[edge.patrol] || usedSpot[edge.spot]) continue;
+                usedPatrol[edge.patrol] = usedSpot[edge.spot] = 1;
+                access += edge.value;
+            }
+            score += ducTerminalAccessWeight * access /
+                (max<double>(1.0, patrolIds.size() * maxStock));
+        }
     }
     e.lasting = score;
     for (int i : patrolIds) busy += steps - (!e.plan[i].empty() && e.plan[i].back() < 0 ? -e.plan[i].back() : 0);
