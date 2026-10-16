@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
 #include <map>
+#include <set>
 
 namespace {
 
@@ -40,9 +42,66 @@ hexudon::DayInfo first_day(const hexudon::MapConfig &config,
   return day;
 }
 
+void test_exact_pareto_graph_matches_tiny_bruteforce() {
+  hexudon::MapConfig config;
+  config.width = 2;
+  config.height = 2;
+  config.day_steps = {6};
+  config.day_seconds = {1.0};
+  config.cells = {hexudon::Terrain::Road, hexudon::Terrain::Plain,
+                  hexudon::Terrain::Mountain, hexudon::Terrain::Plain};
+  config.spots = {{0, 3, 1}};
+  config.agents = {0};
+  config.fuel_limit = 10;
+  config.players = 1;
+  config.busy_threshold = 2;
+  config.jammed_threshold = 4;
+  hexudon::DayInfo day;
+  day.day = 0;
+  day.agents = {{hexudon::AgentKind::Patrol, 0, 10}};
+  day.traffics[0] = 0;
+
+  std::set<std::pair<int, int>> brute;
+  std::function<void(int, int, int)> visit = [&](int pos, int time, int fuel) {
+    if (pos == 3) brute.emplace(time, fuel);
+    const int next_time = time + hexudon::terrain_time(config, pos,
+                                                        day.traffics);
+    const int next_fuel = fuel + hexudon::terrain_fuel(config, pos);
+    if (next_time > config.day_steps[0]) return;
+    for (int direction = 0; direction < 6; ++direction) {
+      if (const auto next = hexudon::neighbor(config, pos, direction)) {
+        visit(*next, next_time, next_fuel);
+      }
+    }
+  };
+  visit(0, 0, 0);
+  std::set<std::pair<int, int>> nondominated;
+  for (const auto candidate : brute) {
+    bool dominated = false;
+    for (const auto other : brute) {
+      if (other.first <= candidate.first && other.second <= candidate.second &&
+          other != candidate) {
+        dominated = true;
+        break;
+      }
+    }
+    if (!dominated) nondominated.insert(candidate);
+  }
+
+  const auto graph = hexudon::build_exact_pareto_graph(config, day);
+  const int source = graph.node_for_pos.at(0);
+  const int target = graph.node_for_pos.at(3);
+  std::set<std::pair<int, int>> actual;
+  for (const auto &path : graph.paths[source][target]) {
+    actual.emplace(path.time, path.fuel);
+  }
+  assert(actual == nondominated);
+}
+
 } // namespace
 
 int main() {
+  test_exact_pareto_graph_matches_tiny_bruteforce();
   // The first mask wins screening by distinct (20 vs 19), but its confirmation
   // drops to 18 while the second mask holds 19. More patrols must not override
   // the second mask's higher robust distinct value (19 vs 18).
@@ -142,6 +201,13 @@ int main() {
   assert(first.planner_state->at("policy").as_string() == "lns_dp");
   assert(first.planner_state->at("schema_version").to_number<int>() == 1);
   assert(callbacks > 0);
+
+  const auto window_alias = hexudon::plan_day_with_state(
+      "window-dp", config, day0, history, types, limits);
+  assert(!hexudon::validate_action_plan(config, day0,
+                                        window_alias.actions));
+  assert(window_alias.planner_state);
+  assert(window_alias.planner_state->at("policy").as_string() == "lns_dp");
 
   const auto proposals = hexudon::build_lns_dp_route_proposals(
       config, day0, history, types, limits, 2);

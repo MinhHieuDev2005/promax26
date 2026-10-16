@@ -589,9 +589,16 @@ bool is_routing_policy(const std::string& policy) {
          policy == "fuel_aware" || policy == "stock_maximiser" ||
          policy == "coordinated" || policy == "local_search" ||
          policy == "lns" || policy == "alns" || policy == "palns" ||
-         policy == "mlns" || policy == "simple_lns" || policy == "lns_dp" ||
+         policy == "mlns" || policy == "simple_lns" || policy == "sisr" ||
+         policy == "lns_dp" || policy == "window_dp" ||
+         policy == "window-dp" ||
          policy == "aco" ||
-         policy == "aco_ls" || policy == "stop_bp" || policy == "bp";
+         policy == "aco_ls" || policy == "stop_bp" || policy == "bp" ||
+         policy == "strategic_sa" || policy == "strategic-sa" ||
+         policy == "strategic-sa-basic" ||
+         policy == "pareto_rcsp" || policy == "pareto-rcsp" ||
+         policy == "bsr_vlns" || policy == "bs-r-vlns" ||
+         policy.starts_with("bsr-p");
 }
 
 thread_local std::size_t alns_restart_worker_count = 1;
@@ -1331,6 +1338,116 @@ AcoGraph build_aco_graph(const MapConfig& config, const DayInfo& day,
   return graph;
 }
 
+AcoGraph build_exact_pareto_graph(const MapConfig& config,
+                                  const DayInfo& day,
+                                  const std::vector<int>& extra_nodes) {
+  AcoGraph graph;
+  auto add_node = [&](int pos) {
+    if (graph.node_for_pos.contains(pos)) return;
+    graph.node_for_pos[pos] = static_cast<int>(graph.nodes.size());
+    graph.nodes.push_back(pos);
+  };
+  for (const auto& agent : day.agents) add_node(agent.pos);
+  for (const auto& spot : config.spots) add_node(spot.pos);
+  for (int pos : extra_nodes) {
+    if (pos >= 0 && pos < config.width * config.height &&
+        config.cells[pos] != Terrain::Pond) {
+      add_node(pos);
+    }
+  }
+
+  struct Label {
+    int pos{};
+    int time{};
+    int fuel{};
+    int parent{-1};
+    int direction{-1};
+    bool active{true};
+  };
+  const int cells = config.width * config.height;
+  const int horizon = *std::max_element(config.day_steps.begin(),
+                                        config.day_steps.end());
+  graph.paths = parallel_indexed(graph.nodes.size(), [&](std::size_t source_i) {
+    std::vector<Label> labels;
+    std::vector<std::vector<int>> at(static_cast<std::size_t>(cells));
+    using QueueItem = std::tuple<int, int, int>;
+    std::priority_queue<QueueItem, std::vector<QueueItem>,
+                        std::greater<QueueItem>> queue;
+    const int source = graph.nodes[source_i];
+    labels.push_back({source, 0, 0, -1, -1, true});
+    at[source].push_back(0);
+    queue.emplace(0, 0, 0);
+
+    while (!queue.empty()) {
+      const auto [used_time, used_fuel, index] = queue.top();
+      queue.pop();
+      if (!labels[index].active || labels[index].time != used_time ||
+          labels[index].fuel != used_fuel) {
+        continue;
+      }
+      const int pos = labels[index].pos;
+      const int move_time = terrain_time(config, pos, day.traffics);
+      const int move_fuel = terrain_fuel(config, pos);
+      if (used_time + move_time > horizon) continue;
+      for (int direction = 0; direction < 6; ++direction) {
+        const auto next = neighbor(config, pos, direction);
+        if (!next || config.cells[*next] == Terrain::Pond) continue;
+        const int candidate_time = used_time + move_time;
+        const int candidate_fuel = used_fuel + move_fuel;
+        bool dominated = false;
+        for (int other : at[*next]) {
+          const auto& label = labels[other];
+          if (label.active && label.time <= candidate_time &&
+              label.fuel <= candidate_fuel) {
+            dominated = true;
+            break;
+          }
+        }
+        if (dominated) continue;
+        for (int other : at[*next]) {
+          auto& label = labels[other];
+          if (label.active && candidate_time <= label.time &&
+              candidate_fuel <= label.fuel) {
+            label.active = false;
+          }
+        }
+        const int next_index = static_cast<int>(labels.size());
+        labels.push_back({*next, candidate_time, candidate_fuel, index,
+                          direction, true});
+        at[*next].push_back(next_index);
+        queue.emplace(candidate_time, candidate_fuel, next_index);
+      }
+    }
+
+    std::vector<std::vector<AcoPath>> result(graph.nodes.size());
+    for (std::size_t target_i = 0; target_i < graph.nodes.size(); ++target_i) {
+      const int target = graph.nodes[target_i];
+      for (int index : at[target]) {
+        if (!labels[index].active) continue;
+        std::vector<int> reverse;
+        for (int cursor = index; labels[cursor].parent >= 0;
+             cursor = labels[cursor].parent) {
+          reverse.push_back(labels[cursor].direction);
+        }
+        std::reverse(reverse.begin(), reverse.end());
+        result[target_i].push_back(
+            {labels[index].time, labels[index].fuel, 0, std::move(reverse)});
+      }
+      auto& paths = result[target_i];
+      std::sort(paths.begin(), paths.end(), [](const AcoPath& left,
+                                               const AcoPath& right) {
+        return std::tie(left.time, left.fuel, left.directions) <
+               std::tie(right.time, right.fuel, right.directions);
+      });
+      for (std::size_t variant = 0; variant < paths.size(); ++variant) {
+        paths[variant].variant = static_cast<int>(variant);
+      }
+    }
+    return result;
+  });
+  return graph;
+}
+
 std::vector<int> alns_transit_nodes(const MapConfig& config,
                                     const AcoGraph& graph,
                                     std::size_t limit,
@@ -1477,16 +1594,18 @@ AgentTypes select_agent_types_online(const std::string& policy,
   if (!is_routing_policy(policy)) {
     throw std::invalid_argument("unknown policy: " + policy);
   }
-  if (policy == "simple_lns") {
+  if (policy == "simple_lns" || policy == "sisr") {
     return select_simple_lns_agent_types(config, limits);
   }
-  if (policy == "lns_dp") {
+  if (policy == "lns_dp" || policy == "window_dp" ||
+      policy == "window-dp") {
     return select_lns_dp_agent_types(config, limits, on_improve);
   }
   if (policy == "lns" || policy == "alns" || policy == "palns" ||
       policy == "mlns" ||
       policy == "stop_bp" ||
-      policy == "bp") {
+      policy == "bp" || policy == "pareto_rcsp" ||
+      policy == "pareto-rcsp") {
     return select_lns_agent_types(config, limits, on_improve);
   }
   const int refuel_count = std::max(1, static_cast<int>(types.size()) / 4);
@@ -1716,12 +1835,26 @@ ActionPlan plan_day_online(const std::string& policy, const MapConfig& config,
   if (policy == "local_search") {
     return build_local_search_plan(config, day, history, fixed_types, limits);
   }
-  if (policy == "simple_lns") {
+  if (policy == "simple_lns" || policy == "sisr") {
     return build_simple_lns_plan(config, day, history, fixed_types, limits,
                                  nullptr, on_improve)
         .actions;
   }
-  if (policy == "lns_dp") {
+  if (policy == "bsr_vlns" || policy == "bs-r-vlns" ||
+      policy.starts_with("bsr-p")) {
+    int displacement = 3;
+    if (policy.starts_with("bsr-p") && policy.size() == 6 &&
+        policy.back() >= '2' && policy.back() <= '5') {
+      displacement = policy.back() - '0';
+    }
+    return build_bsr_vlns_plan(config, day, history, fixed_types, limits,
+                               displacement);
+  }
+  if (policy == "pareto_rcsp" || policy == "pareto-rcsp") {
+    return build_pareto_rcsp_plan(config, day, history, fixed_types, limits);
+  }
+  if (policy == "lns_dp" || policy == "window_dp" ||
+      policy == "window-dp") {
     return build_lns_dp_plan(config, day, history, fixed_types, limits,
                              nullptr, on_improve)
         .actions;
@@ -1736,6 +1869,10 @@ ActionPlan plan_day_online(const std::string& policy, const MapConfig& config,
     return build_mlns_plan(config, day, history, fixed_types, limits, nullptr,
                            on_improve)
         .actions;
+  }
+  if (policy == "strategic_sa" || policy == "strategic-sa" ||
+      policy == "strategic-sa-basic") {
+    return build_strategic_sa_plan(config, day, history, fixed_types, limits);
   }
   if (policy == "lns" || policy == "alns" || policy == "palns") {
     SearchLimits resolved_limits = limits;
@@ -1817,11 +1954,12 @@ PlannerResult plan_day_with_state(
     return build_mlns_plan(config, day, history, fixed_types, limits,
                            planner_state, on_improve);
   }
-  if (policy == "simple_lns") {
+  if (policy == "simple_lns" || policy == "sisr") {
     return build_simple_lns_plan(config, day, history, fixed_types, limits,
                                  planner_state, on_improve);
   }
-  if (policy == "lns_dp") {
+  if (policy == "lns_dp" || policy == "window_dp" ||
+      policy == "window-dp") {
     return build_lns_dp_plan(config, day, history, fixed_types, limits,
                              planner_state, on_improve);
   }

@@ -1,0 +1,24 @@
+{
+  "name": "boundary_joint_multistart_v4",
+  "status": "candidate-rebuilt",
+  "scope": ["16x16", "24x24", "32x32"],
+  "executable": "boundary_joint_multistart_v4.exe",
+  "executable_sha256": "846b72f23955e615ef573239ac4a4982a21780913e9303990a82310884c73e64",
+  "source_zip_sha256": "4da451494fb90c72f6791edac80189db2c85a172d39c8cca3b04c7b22aa56e66",
+  "baseline": "../boundary_joint_h61_326/boundary_joint_runner.exe",
+  "baseline_sha256": "3fb6c3e1b2ba8ad6b282bd230f9c1f7fa58df783ce94cacf93970cc798a6f17a",
+  "policy": {
+    "16x16": "short checkpoint plus 2500ms ALNS restarts",
+    "24x24": "short checkpoint plus 4500ms ALNS restarts",
+    "32x32": "unchanged baseline path; experimental multi-start disabled"
+  },
+  "validation": {
+    "unit_tests": "10 test groups passed",
+    "smoke_3s": "3 maps valid; no coverage or deadline failures",
+    "historical_ab_30s_seed1": {
+      "16x16": {"baseline": 91, "candidate": 94},
+      "24x24": {"baseline": 219, "candidate": 220},
+      "32x32": "baseline path retained"
+    }
+  }
+}

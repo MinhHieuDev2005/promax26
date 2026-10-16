@@ -1,0 +1,899 @@
+{
+  "experiment_id": "stable-v10-16-boundary-release-cross-baseline-user-input-16x16-prefix1-s1-day1-s2",
+  "initial": {
+    "op": "plan",
+    "config": {
+      "startsAt": 0,
+      "daySeconds": [
+        60,
+        60,
+        60,
+        60,
+        60,
+        60
+      ],
+      "daySteps": [
+        32,
+        51,
+        70,
+        90,
+        109,
+        128
+      ],
+      "map": {
+        "height": 16,
+        "width": 16,
+        "cells": [
+          [
+            0,
+            1,
+            0,
+            2,
+            1,
+            2,
+            2,
+            2,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            2,
+            2,
+            2,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            2,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            3,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0
+          ],
+          [
+            1,
+            2,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            2
+          ],
+          [
+            3,
+            3,
+            3,
+            3,
+            3,
+            1,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ],
+          [
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            0,
+            0,
+            2,
+            0,
+            2,
+            0,
+            3,
+            1,
+            1,
+            0,
+            0,
+            1,
+            2,
+            1
+          ],
+          [
+            0,
+            2,
+            0,
+            0,
+            1,
+            0,
+            0,
+            2,
+            1,
+            2,
+            0,
+            2,
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            3,
+            2,
+            1,
+            0,
+            0,
+            2,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            3,
+            1,
+            0,
+            0,
+            0,
+            2,
+            1,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            2,
+            1,
+            3,
+            2,
+            2,
+            2,
+            1,
+            0,
+            2,
+            2
+          ],
+          [
+            2,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            1,
+            3,
+            1,
+            2,
+            0,
+            0,
+            2,
+            1,
+            0
+          ]
+        ]
+      },
+      "spots": [
+        {
+          "brand": 0,
+          "pos": 237,
+          "stocks": 1
+        },
+        {
+          "brand": 1,
+          "pos": 121,
+          "stocks": 1
+        },
+        {
+          "brand": 2,
+          "pos": 159,
+          "stocks": 1
+        },
+        {
+          "brand": 3,
+          "pos": 11,
+          "stocks": 1
+        },
+        {
+          "brand": 4,
+          "pos": 118,
+          "stocks": 2
+        },
+        {
+          "brand": 5,
+          "pos": 14,
+          "stocks": 1
+        },
+        {
+          "brand": 6,
+          "pos": 123,
+          "stocks": 4
+        },
+        {
+          "brand": 7,
+          "pos": 144,
+          "stocks": 4
+        },
+        {
+          "brand": 0,
+          "pos": 109,
+          "stocks": 4
+        },
+        {
+          "brand": 1,
+          "pos": 225,
+          "stocks": 4
+        }
+      ],
+      "agents": [
+        226,
+        71,
+        27,
+        90
+      ],
+      "fuelLimits": 32,
+      "players": 2,
+      "busyThreshold": 3,
+      "jammedThreshold": 5
+    },
+    "types": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "history": {
+      "distinct_brands": [],
+      "submitted_actions": [],
+      "cumulative_daily_types": 0,
+      "total_servings": 0
+    },
+    "day_info": {
+      "day": 0,
+      "agents": [
+        {
+          "kind": 1,
+          "pos": 226,
+          "fuel": 32
+        },
+        {
+          "kind": 0,
+          "pos": 71,
+          "fuel": 32
+        },
+        {
+          "kind": 0,
+          "pos": 27,
+          "fuel": 32
+        },
+        {
+          "kind": 0,
+          "pos": 90,
+          "fuel": 32
+        }
+      ],
+      "others": [],
+      "traffics": [
+        {
+          "pos": 1,
+          "status": 0
+        },
+        {
+          "pos": 4,
+          "status": 0
+        },
+        {
+          "pos": 40,
+          "status": 0
+        },
+        {
+          "pos": 67,
+          "status": 0
+        },
+        {
+          "pos": 79,
+          "status": 0
+        },
+        {
+          "pos": 80,
+          "status": 0
+        },
+        {
+          "pos": 82,
+          "status": 0
+        },
+        {
+          "pos": 84,
+          "status": 0
+        },
+        {
+          "pos": 85,
+          "status": 0
+        },
+        {
+          "pos": 100,
+          "status": 0
+        },
+        {
+          "pos": 112,
+          "status": 0
+        },
+        {
+          "pos": 116,
+          "status": 0
+        },
+        {
+          "pos": 125,
+          "status": 0
+        },
+        {
+          "pos": 133,
+          "status": 0
+        },
+        {
+          "pos": 146,
+          "status": 0
+        },
+        {
+          "pos": 147,
+          "status": 0
+        },
+        {
+          "pos": 155,
+          "status": 0
+        },
+        {
+          "pos": 169,
+          "status": 0
+        },
+        {
+          "pos": 170,
+          "status": 0
+        },
+        {
+          "pos": 173,
+          "status": 0
+        },
+        {
+          "pos": 175,
+          "status": 0
+        },
+        {
+          "pos": 180,
+          "status": 0
+        },
+        {
+          "pos": 184,
+          "status": 0
+        },
+        {
+          "pos": 188,
+          "status": 0
+        },
+        {
+          "pos": 196,
+          "status": 0
+        },
+        {
+          "pos": 197,
+          "status": 0
+        },
+        {
+          "pos": 198,
+          "status": 0
+        },
+        {
+          "pos": 202,
+          "status": 0
+        },
+        {
+          "pos": 207,
+          "status": 0
+        },
+        {
+          "pos": 217,
+          "status": 0
+        },
+        {
+          "pos": 222,
+          "status": 0
+        },
+        {
+          "pos": 224,
+          "status": 0
+        },
+        {
+          "pos": 229,
+          "status": 0
+        },
+        {
+          "pos": 231,
+          "status": 0
+        },
+        {
+          "pos": 236,
+          "status": 0
+        },
+        {
+          "pos": 247,
+          "status": 0
+        },
+        {
+          "pos": 249,
+          "status": 0
+        },
+        {
+          "pos": 254,
+          "status": 0
+        }
+      ]
+    }
+  },
+  "traffic_model": "idle",
+  "case_path": null,
+  "checkpoint": "solver_learning/runs/boundary-release-cross-baseline-user-input-16x16-prefix1-s1.json",
+  "source_sha256": "360296d100bce6875ab2834f0072af1927430a70308bd9c2352a349e8d9b8ac7",
+  "executable": "D:\\procon\\pro26\\promax26-duc\\build-boundary-stable-mingw\\boundary_joint_stable_runner.exe",
+  "executable_sha256": "cebe0c09f2f824909ae5e2e42ca5229f3f1f25aa6790ec65dba1255d6220cc81",
+  "seed": 2,
+  "budget_ms": 45000,
+  "search": {
+    "enablePool": 1,
+    "boundaryTrade": 1,
+    "enableBoundarySearch": 0
+  },
+  "mode": "day1",
+  "policy": "alns",
+  "roles": [
+    1,
+    0,
+    0,
+    0
+  ],
+  "profiling": "psutil 25ms; Windows peak_wset; sampled CPU is a lower bound",
+  "days": [
+    {
+      "day": 0,
+      "input_state": {
+        "day": 0,
+        "agents": [
+          {
+            "kind": 1,
+            "pos": 226,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 71,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 27,
+            "fuel": 32
+          },
+          {
+            "kind": 0,
+            "pos": 90,
+            "fuel": 32
+          }
+        ],
+        "others": [],
+        "traffics": [
+          {
+            "pos": 1,
+            "status": 0
+          },
+          {
+            "pos": 4,
+            "status": 0
+          },
+          {
+            "pos": 40,
+            "status": 0
+          },
+          {
+            "pos": 67,
+            "status": 0
+          },
+          {
+            "pos": 79,
+            "status": 0
+          },
+          {
+            "pos": 80,
+            "status": 0
+          },
+          {
+            "pos": 82,
+            "status": 0
+          },
+          {
+            "pos": 84,
+            "status": 0
+          },
+          {
+            "pos": 85,
+            "status": 0
+          },
+          {
+            "pos": 100,
+            "status": 0
+          },
+          {
+            "pos": 112,
+            "status": 0
+          },
+          {
+            "pos": 116,
+            "status": 0
+          },
+          {
+            "pos": 125,
+            "status": 0
+          },
+          {
+            "pos": 133,
+            "status": 0
+          },
+          {
+            "pos": 146,
+            "status": 0
+          },
+          {
+            "pos": 147,
+            "status": 0
+          },
+          {
+            "pos": 155,
+            "status": 0
+          },
+          {
+            "pos": 169,
+            "status": 0
+          },
+          {
+            "pos": 170,
+            "status": 0
+          },
+          {
+            "pos": 173,
+            "status": 0
+          },
+          {
+            "pos": 175,
+            "status": 0
+          },
+          {
+            "pos": 180,
+            "status": 0
+          },
+          {
+            "pos": 184,
+            "status": 0
+          },
+          {
+            "pos": 188,
+            "status": 0
+          },
+          {
+            "pos": 196,
+            "status": 0
+          },
+          {
+            "pos": 197,
+            "status": 0
+          },
+          {
+            "pos": 198,
+            "status": 0
+          },
+          {
+            "pos": 202,
+            "status": 0
+          },
+          {
+            "pos": 207,
+            "status": 0
+          },
+          {
+            "pos": 217,
+            "status": 0
+          },
+          {
+            "pos": 222,
+            "status": 0
+          },
+          {
+            "pos": 224,
+            "status": 0
+          },
+          {
+            "pos": 229,
+            "status": 0
+          },
+          {
+            "pos": 231,
+            "status": 0
+          },
+          {
+            "pos": 236,
+            "status": 0
+          },
+          {
+            "pos": 247,
+            "status": 0
+          },
+          {
+            "pos": 249,
+            "status": 0
+          },
+          {
+            "pos": 254,
+            "status": 0
+          }
+        ]
+      },
+      "plan": [
+        [
+          0,
+          1,
+          1,
+          1,
+          1,
+          2,
+          1,
+          1,
+          1,
+          -2,
+          4,
+          -11
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          3,
+          2,
+          3,
+          3,
+          2,
+          2,
+          1,
+          2,
+          2,
+          1,
+          2,
+          2,
+          -2
+        ],
+        [
+          1,
+          5,
+          5,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        [
+          4,
+          4,
+          2,
+          2,
+          2,
+          1,
+          2,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          -6
+        ]
+      ],
+      "peak_rss_bytes": 8179712,
+      "cpu_seconds_sampled": 31.546875,
+      "wall_ms": 31581.072500004666,
+      "daily_types": 8,
+      "servings": 9,
+      "diagnostics": {
+        "engine": "boundary_joint_stable_v1",
+        "selected": "tail_macro",
+        "completed_starts": 3,
+        "coverage_complete": true,
+        "official_c1": 8,
+        "official_c2": 8,
+        "official_c3": 9,
+        "candidate_count": 120,
+        "validated": 3,
+        "tail_generated": 305,
+        "baseline_ms": 31543,
+        "elapsed_ms": 31554
+      },
+      "metrics": {
+        "expanded": null,
+        "candidate_count": 120,
+        "duplicates": null,
+        "tt_hits": null,
+        "tt_lookups": null,
+        "dominance_prunes": null,
+        "bound_prunes": null,
+        "local_search_moves": null,
+        "route_count": null,
+        "combinations": null,
+        "validated": 3,
+        "improvements": null,
+        "labels": null,
+        "transitions": null,
+        "duplicate_rate": null,
+        "tt_hit_rate": null,
+        "expansions_per_ms": null
+      }
+    }
+  ],
+  "score": [
+    8,
+    8,
+    9
+  ],
+  "verified": true,
+  "full_coverage": true,
+  "deadline_pass": true,
+  "peak_rss_bytes": 8179712,
+  "max_day_ms": 31581.072500004666
+}

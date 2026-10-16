@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <string>
 #include <vector>
 
 namespace {
@@ -138,6 +139,77 @@ void test_mlns_streams_its_valid_cold_incumbent() {
   assert(!hexudon::validate_action_plan(config, day, planned.actions));
 }
 
+void test_strategic_sa_aliases_return_valid_plans() {
+  const auto config = intercept_config();
+  const hexudon::AgentTypes types = {hexudon::AgentKind::Patrol,
+                                     hexudon::AgentKind::Refuel};
+  hexudon::DayInfo day;
+  day.day = 0;
+  day.agents = {{types[0], 0, 2}, {types[1], 2, 0}};
+  hexudon::SearchLimits limits;
+  limits.min_iterations = 2;
+  limits.max_iterations = 2;
+  limits.stagnation_iterations = 0;
+
+  for (const std::string policy : {"strategic_sa", "strategic-sa",
+                                   "strategic-sa-basic"}) {
+    const auto plan = hexudon::plan_day(policy, config, day, {}, types, limits);
+    assert(!hexudon::validate_action_plan(config, day, plan));
+  }
+}
+
+void test_bsr_vlns_returns_valid_plan() {
+  const auto config = intercept_config();
+  const hexudon::AgentTypes types = {hexudon::AgentKind::Patrol,
+                                     hexudon::AgentKind::Refuel};
+  hexudon::DayInfo day;
+  day.day = 0;
+  day.agents = {{types[0], 0, 2}, {types[1], 2, 0}};
+  hexudon::SearchLimits limits;
+  limits.min_iterations = 2;
+  limits.max_iterations = 2;
+  limits.stagnation_iterations = 0;
+  limits.local_search_passes = 1;
+
+  const auto plan = hexudon::plan_day("bsr-p2", config, day, {}, types,
+                                      limits);
+  assert(!hexudon::validate_action_plan(config, day, plan));
+}
+
+void test_sisr_alias_uses_stateful_solver() {
+  const auto config = intercept_config();
+  const hexudon::AgentTypes types = {hexudon::AgentKind::Patrol,
+                                     hexudon::AgentKind::Refuel};
+  hexudon::DayInfo day;
+  day.day = 0;
+  day.agents = {{types[0], 0, 2}, {types[1], 2, 0}};
+  hexudon::SearchLimits limits;
+  limits.min_iterations = 1;
+  limits.max_iterations = 2;
+  limits.stagnation_iterations = 0;
+
+  const auto planned = hexudon::plan_day_with_state(
+      "sisr", config, day, {}, types, limits);
+  assert(!hexudon::validate_action_plan(config, day, planned.actions));
+  assert(planned.planner_state);
+  assert(planned.planner_state->at("policy").as_string() == "simple_lns");
+}
+
+void test_pareto_rcsp_returns_valid_plan() {
+  const auto config = intercept_config();
+  const hexudon::AgentTypes types = {hexudon::AgentKind::Patrol,
+                                     hexudon::AgentKind::Refuel};
+  hexudon::DayInfo day;
+  day.day = 0;
+  day.agents = {{types[0], 0, 2}, {types[1], 2, 0}};
+  hexudon::SearchLimits limits;
+  limits.min_iterations = 1;
+  limits.max_iterations = 2;
+  const auto plan = hexudon::plan_day("pareto-rcsp", config, day, {}, types,
+                                      limits);
+  assert(!hexudon::validate_action_plan(config, day, plan));
+}
+
 }  // namespace
 
 int main() {
@@ -145,5 +217,9 @@ int main() {
   test_simple_lns_can_collect_multiple_stock_copies();
   test_real_match_opponents_may_hide_fuel();
   test_mlns_streams_its_valid_cold_incumbent();
+  test_strategic_sa_aliases_return_valid_plans();
+  test_bsr_vlns_returns_valid_plan();
+  test_sisr_alias_uses_stateful_solver();
+  test_pareto_rcsp_returns_valid_plan();
   std::cout << "simple_lns tests passed\n";
 }

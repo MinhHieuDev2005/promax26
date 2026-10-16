@@ -1,0 +1,13 @@
+{
+  "solver_learning/runs/boundary-release-cross-baseline-user-input-16x16-prefix1-s1.json": {
+    "n": 3,
+    "mean": 9,
+    "median": 9,
+    "min": 9,
+    "max": 9,
+    "stddev": 0.0,
+    "invalid": 0,
+    "coverage_failures": 0,
+    "deadline_failures": 0
+  }
+}

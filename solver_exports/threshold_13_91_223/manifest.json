@@ -1,0 +1,21 @@
+{
+  "threshold": [13, 91, 223],
+  "recommended": "h17",
+  "executables": {
+    "alns": {"file": "bin/hexudon.exe", "args": ["plan", "alns"]},
+    "lns": {"file": "bin/hexudon.exe", "args": ["plan", "lns"]},
+    "v2": {"file": "bin/chokudai_v2_runner.exe"},
+    "h04": {"file": "bin/chokudai_v2_h04_runner.exe"},
+    "h08": {"file": "bin/chokudai_v2_h08_runner.exe"},
+    "h17": {"file": "bin/chokudai_v2_h17_runner.exe", "resume_compatible": true},
+    "h17_historical_225": {"file": "bin/chokudai_v2_h17_historical_225.exe", "resume_compatible": false},
+    "h20": {"file": "bin/chokudai_v2_h20_runner.exe"},
+    "h22": {"file": "bin/chokudai_v2_h22_runner.exe"}
+  },
+  "full_runs": {
+    "225": ["h08-v2h08-60000-1", "h17-v2h17-60000-1"],
+    "224": ["audit-alns-3000-1", "h03-v2-60000-1", "h07-alns-3000-4", "h13-both-alns-3000-1", "h19s2-v2h17-60000-2", "h19s4-v2h17-60000-4", "h21-v2h20-60000-1"],
+    "223": ["audit20-alns-20000-1", "audit-lns-3000-1", "h04-ablation-v2h04-20000-1", "h04-v2h04-20000-1", "h15-both-alns-3000-1", "h15-cont10-alns-3000-1", "h22-v2h22-60000-1"]
+  },
+  "suffix_runs": ["h09d3-alns-3000-2", "h09d5-alns-3000-2", "h09d3-alns-3000-3", "h20d3-v2h20-60000-4"]
+}

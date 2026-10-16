@@ -1,0 +1,165 @@
+{
+  "scope": "first day only; cannot establish whole-match superiority",
+  "baseline": {
+    "cases/user-input-16x16.json": {
+      "n": 2,
+      "mean": 9,
+      "median": 9.0,
+      "min": 9,
+      "max": 9,
+      "stddev": 0.0,
+      "invalid": 0,
+      "coverage_failures": 0,
+      "deadline_failures": 0
+    },
+    "cases/user-input-24x24.json": {
+      "n": 2,
+      "mean": 22,
+      "median": 22.0,
+      "min": 22,
+      "max": 22,
+      "stddev": 0.0,
+      "invalid": 0,
+      "coverage_failures": 0,
+      "deadline_failures": 0
+    },
+    "cases/user-input-32x32.json": {
+      "n": 2,
+      "mean": 44,
+      "median": 44.0,
+      "min": 44,
+      "max": 44,
+      "stddev": 0.0,
+      "invalid": 0,
+      "coverage_failures": 0,
+      "deadline_failures": 0
+    }
+  },
+  "preview": {
+    "cases/user-input-16x16.json": {
+      "n": 2,
+      "mean": 9,
+      "median": 9.0,
+      "min": 9,
+      "max": 9,
+      "stddev": 0.0,
+      "invalid": 0,
+      "coverage_failures": 0,
+      "deadline_failures": 0
+    },
+    "cases/user-input-24x24.json": {
+      "n": 2,
+      "mean": 21.5,
+      "median": 21.5,
+      "min": 21,
+      "max": 22,
+      "stddev": 0.5,
+      "invalid": 0,
+      "coverage_failures": 0,
+      "deadline_failures": 0
+    },
+    "cases/user-input-32x32.json": {
+      "n": 2,
+      "mean": 43.5,
+      "median": 43.5,
+      "min": 43,
+      "max": 44,
+      "stddev": 0.5,
+      "invalid": 0,
+      "coverage_failures": 0,
+      "deadline_failures": 0
+    }
+  },
+  "pairs": [
+    {
+      "case": "cases/user-input-16x16.json",
+      "seed": 1,
+      "baseline": [
+        8,
+        8,
+        9
+      ],
+      "preview": [
+        8,
+        8,
+        9
+      ],
+      "non_regression": true
+    },
+    {
+      "case": "cases/user-input-16x16.json",
+      "seed": 2,
+      "baseline": [
+        8,
+        8,
+        9
+      ],
+      "preview": [
+        8,
+        8,
+        9
+      ],
+      "non_regression": true
+    },
+    {
+      "case": "cases/user-input-24x24.json",
+      "seed": 1,
+      "baseline": [
+        10,
+        10,
+        22
+      ],
+      "preview": [
+        10,
+        10,
+        21
+      ],
+      "non_regression": false
+    },
+    {
+      "case": "cases/user-input-24x24.json",
+      "seed": 2,
+      "baseline": [
+        10,
+        10,
+        22
+      ],
+      "preview": [
+        10,
+        10,
+        22
+      ],
+      "non_regression": true
+    },
+    {
+      "case": "cases/user-input-32x32.json",
+      "seed": 1,
+      "baseline": [
+        14,
+        14,
+        44
+      ],
+      "preview": [
+        14,
+        14,
+        44
+      ],
+      "non_regression": true
+    },
+    {
+      "case": "cases/user-input-32x32.json",
+      "seed": 2,
+      "baseline": [
+        14,
+        14,
+        44
+      ],
+      "preview": [
+        14,
+        14,
+        43
+      ],
+      "non_regression": false
+    }
+  ]
+}

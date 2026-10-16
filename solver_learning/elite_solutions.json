@@ -1,0 +1,2004 @@
+[
+  {
+    "experiment_id": "u25-prpv2-suffix303-staging-pareto_route_pool_v2-3000-6",
+    "score": [
+      16,
+      112,
+      303
+    ],
+    "signature": "cfba8353e9db5c712ff5b00a325c6567f0d7263c2459ddf3b598d7a159053089",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-suffix303-staging-pareto_route_pool_v2-3000-6.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-elite303-verify-pareto_route_pool_v2-3000-2",
+    "score": [
+      16,
+      112,
+      303
+    ],
+    "signature": "a7931e9e87cd4be241ea502a2b33624e871cdef319d75485358725c505b4561b",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-elite303-verify-pareto_route_pool_v2-3000-2.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-elite302-smoke-pareto_route_pool_v2-3000-1",
+    "score": [
+      16,
+      112,
+      302
+    ],
+    "signature": "38aa6ef54f76dbd18bcd2558b60356457ecd6235bf29c29eb4b37e09ad28459b",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-elite302-smoke-pareto_route_pool_v2-3000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-threadtune12-pareto_route_pool_v2-12000-1",
+    "score": [
+      16,
+      112,
+      301
+    ],
+    "signature": "067ab52efadb9d74890cb3879bf7a3eb1a3f5205f74256496197edbd93cc3420",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-threadtune12-pareto_route_pool_v2-12000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-persistent-elite-smoke-pareto_route_pool_v2-3000-1",
+    "score": [
+      16,
+      112,
+      301
+    ],
+    "signature": "9031e56b46c2da1ab8fccf482fca5b4de17be9e30ca78be986f3b0ae1a02d633",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-persistent-elite-smoke-pareto_route_pool_v2-3000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-alns8-seedsweep-h24-8000-3",
+    "score": [
+      16,
+      112,
+      301
+    ],
+    "signature": "a5174e6c383f19cac5d46b94e243e7491d9eba79728c17334544e0b8c2b47250",
+    "checkpoint": "solver_learning\\runs\\u25-alns8-seedsweep-h24-8000-3.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u25-baseline45-h24-45000-1",
+    "score": [
+      16,
+      112,
+      300
+    ],
+    "signature": "d10dd82ec5f0055b1628dcc48e342026564188b4be8474747df112e0bbf07be2",
+    "checkpoint": "solver_learning\\runs\\u25-baseline45-h24-45000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u25-prpv2-h22-lns-pareto_route_pool_v2-5000-1",
+    "score": [
+      16,
+      112,
+      300
+    ],
+    "signature": "a02686ef91675ffab821812b84b892f8fb4fb758e66a7af63e524168016fe8b4",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-h22-lns-pareto_route_pool_v2-5000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-alns8-seedsweep-h24-8000-6",
+    "score": [
+      16,
+      112,
+      300
+    ],
+    "signature": "6012b3b992978864f2fa01abd99ce5e18739c368e13e4db1161007e1e8861695",
+    "checkpoint": "solver_learning\\runs\\u25-alns8-seedsweep-h24-8000-6.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u25-chokudai20-v2h17-20000-1",
+    "score": [
+      16,
+      112,
+      299
+    ],
+    "signature": "9d20225d4c7e4f9720d9228771158afbb673c45355b23e61327af56d6147a1b5",
+    "checkpoint": "solver_learning\\runs\\u25-chokudai20-v2h17-20000-1.json",
+    "family": "v2h17"
+  },
+  {
+    "experiment_id": "u25-h22-45-v2h22-45000-1",
+    "score": [
+      16,
+      112,
+      299
+    ],
+    "signature": "05b3b380a608805afa8dfab89ecd0161f93ac277f7638c26036b5b6f0d7173d7",
+    "checkpoint": "solver_learning\\runs\\u25-h22-45-v2h22-45000-1.json",
+    "family": "v2h22"
+  },
+  {
+    "experiment_id": "u25-prpv2-state-equivalent12-pareto_route_pool_v2-12000-1",
+    "score": [
+      16,
+      112,
+      299
+    ],
+    "signature": "3fca066a5c21b72081f9a97befe4ed0975ad2acd5503e89b2339111ed4a5d6de",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-state-equivalent12-pareto_route_pool_v2-12000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-alns8-seedsweep-h24-8000-8",
+    "score": [
+      16,
+      112,
+      299
+    ],
+    "signature": "dd24c626b9222591b3811e027f53548643094e753f149bf1305bbb4092bf9611",
+    "checkpoint": "solver_learning\\runs\\u25-alns8-seedsweep-h24-8000-8.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u25-prpv2-alns-elites12-pareto_route_pool_v2-12000-1",
+    "score": [
+      16,
+      112,
+      298
+    ],
+    "signature": "7a848f3d2e6bb7f35f0b8b2dfaa30509c7fc14ab9a2159a2d8c26202d433f099",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-alns-elites12-pareto_route_pool_v2-12000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-alns8-seedsweep-h24-8000-5",
+    "score": [
+      16,
+      112,
+      298
+    ],
+    "signature": "7816487da262cef2a25f9ea4d4f322ae6f4321f41e495fafd4ea9552b972d85f",
+    "checkpoint": "solver_learning\\runs\\u25-alns8-seedsweep-h24-8000-5.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u25-baseline10-h24-10000-1",
+    "score": [
+      16,
+      112,
+      297
+    ],
+    "signature": "9a515f2f76e874a3880ebaeb905069fc218e5af810b2fb7b2a83709ddfb31364",
+    "checkpoint": "solver_learning\\runs\\u25-baseline10-h24-10000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u25-cross-alnsd1-chokudai-v2h17-20000-1",
+    "score": [
+      16,
+      112,
+      297
+    ],
+    "signature": "5d553fbf04b0384756b014a9b2a12e85da8dd98e8f90d1af083e48c7ca0b02bc",
+    "checkpoint": "solver_learning\\runs\\u25-cross-alnsd1-chokudai-v2h17-20000-1.json",
+    "family": "v2h17"
+  },
+  {
+    "experiment_id": "u25-prpv2-h22-lns-seq45-pareto_route_pool_v2-45000-1",
+    "score": [
+      16,
+      112,
+      297
+    ],
+    "signature": "7bb3fc0bd31a908af8e6152a560a5f89b44c6149c568c312ddec8d99ad6d823b",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-h22-lns-seq45-pareto_route_pool_v2-45000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-alns8-lns-prod-pareto_route_pool_v2-12000-1",
+    "score": [
+      16,
+      112,
+      297
+    ],
+    "signature": "37476f5b96da5c175677bf91d352af1296cdace3d5d5fbbf6025d027b33d96db",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-alns8-lns-prod-pareto_route_pool_v2-12000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-generator-audit1s-lns-1000-1",
+    "score": [
+      16,
+      112,
+      296
+    ],
+    "signature": "02a07ae9eaee4c8f676ca0b99b5242bc31725070a3b05c2cf69284614b94cb5f",
+    "checkpoint": "solver_learning\\runs\\u25-generator-audit1s-lns-1000-1.json",
+    "family": "lns"
+  },
+  {
+    "experiment_id": "u25-prpv2-alns-elites45-pareto_route_pool_v2-45000-1",
+    "score": [
+      16,
+      112,
+      296
+    ],
+    "signature": "a01d86a89e79a86669c2c0bb4a607407da54d9e871a050d7c2cc8d3f24235fcb",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-alns-elites45-pareto_route_pool_v2-45000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-seedtune12-pareto_route_pool_v2-12000-3",
+    "score": [
+      16,
+      112,
+      296
+    ],
+    "signature": "dc96e5e23a1ef5e866b0fb252c990f2b72d7788beb4a12e41de72a6c32942486",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-seedtune12-pareto_route_pool_v2-12000-3.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-forced-t1-12-pareto_route_pool_v2-12000-1",
+    "score": [
+      16,
+      112,
+      296
+    ],
+    "signature": "50ea97d6da3a5924bcbadf13048cf3cd2c3707faf14ff83336f5886ed008346f",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-forced-t1-12-pareto_route_pool_v2-12000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-seedtune12-pareto_route_pool_v2-12000-2",
+    "score": [
+      16,
+      112,
+      295
+    ],
+    "signature": "0b5c22cba240aa886885f362455df8ec11a30f97fa5298347d669c9af9f0191c",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-seedtune12-pareto_route_pool_v2-12000-2.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-forced-t1-45-pareto_route_pool_v2-45000-1",
+    "score": [
+      16,
+      112,
+      295
+    ],
+    "signature": "7556fbf885f526827c9878be39f2159d07312cdc09a742fd85b3708393843976",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-forced-t1-45-pareto_route_pool_v2-45000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-h22alns-smoke2-pareto_route_pool_v2-3000-1",
+    "score": [
+      16,
+      112,
+      294
+    ],
+    "signature": "c5bf760f90fd4890ae26e1891b04b6ab257fa5a17b08c46f87144e3938673776",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-h22alns-smoke2-pareto_route_pool_v2-3000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-thread2-12-pareto_route_pool_v2-12000-1",
+    "score": [
+      16,
+      112,
+      294
+    ],
+    "signature": "bc5699220b2b1750a786b9f367f46ade8afc83406ece760f9c165ffbc393244c",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-thread2-12-pareto_route_pool_v2-12000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-baseline10-h24-10000-2",
+    "score": [
+      16,
+      112,
+      293
+    ],
+    "signature": "914cd09acfb9daa65888a20e5ae8927f95e42f965cf4ea823e40f5769dfe5814",
+    "checkpoint": "solver_learning\\runs\\u25-baseline10-h24-10000-2.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u25-prpv2-multistart-alns45-pareto_route_pool_v2-45000-1",
+    "score": [
+      16,
+      112,
+      293
+    ],
+    "signature": "a55c451c58cd6eef1d0ca9be8e52342e0f1f9b2d55d1b1ee66cdf6c4c5be7e96",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-multistart-alns45-pareto_route_pool_v2-45000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-prod-alns-floor12-pareto_route_pool_v2-12000-1",
+    "score": [
+      16,
+      112,
+      293
+    ],
+    "signature": "0093096ef73dd953152631f75a191056f476be66c7fa4e997a993a625cc403f1",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-prod-alns-floor12-pareto_route_pool_v2-12000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-true-alns8-floor12-pareto_route_pool_v2-12000-1",
+    "score": [
+      16,
+      112,
+      293
+    ],
+    "signature": "ccb0fce8f3a592a3bd4ccead503203e445efac89229f6ca27a5263a78a6cd11e",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-true-alns8-floor12-pareto_route_pool_v2-12000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-state-equivalent45-pareto_route_pool_v2-45000-1",
+    "score": [
+      16,
+      112,
+      293
+    ],
+    "signature": "6806c2f84963e90be037eb4eeb87993e38e5b9ec567c0d5b56d94e6238ebc737",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-state-equivalent45-pareto_route_pool_v2-45000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-suffix-rollout20-pareto_route_pool_v2-20000-1",
+    "score": [
+      16,
+      112,
+      292
+    ],
+    "signature": "984cff7725ca70507a48154ebdec04aa1983b585c73e7a7013495997dcb8d748",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-suffix-rollout20-pareto_route_pool_v2-20000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-seedtune12-pareto_route_pool_v2-12000-4",
+    "score": [
+      16,
+      112,
+      292
+    ],
+    "signature": "f8ce25032d379572d1a6334cf526528413fcb6f40cfdec24b699139f2a0d77fe",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-seedtune12-pareto_route_pool_v2-12000-4.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-smoke-pareto_route_pool_v2-3000-1",
+    "score": [
+      16,
+      112,
+      291
+    ],
+    "signature": "5d1f6db159f5983d44e55c6cca6408ef3f4b14fcefa282aa6b9498704feb8988",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-smoke-pareto_route_pool_v2-3000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-full45-pareto_route_pool_v2-45000-1",
+    "score": [
+      16,
+      112,
+      291
+    ],
+    "signature": "2bee469439816d0de382697288e8ada40181814ce0edbfe46fbfa33e48194e35",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-full45-pareto_route_pool_v2-45000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prpv2-horizon-seed12-pareto_route_pool_v2-12000-1",
+    "score": [
+      16,
+      112,
+      291
+    ],
+    "signature": "daac6a155c459068422fed24cb30d073c9c39ed9c232d340bc88f3041f781c88",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-horizon-seed12-pareto_route_pool_v2-12000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-alns8-seedsweep-h24-8000-7",
+    "score": [
+      16,
+      112,
+      291
+    ],
+    "signature": "5dcba5497f065b320b5ff883bc72a8e6d22333431ab86cbe752aab2c69fbe3c2",
+    "checkpoint": "solver_learning\\runs\\u25-alns8-seedsweep-h24-8000-7.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u25-role2-10-h24-10000-1",
+    "score": [
+      16,
+      112,
+      290
+    ],
+    "signature": "5dc72955a3772ef408101dd9d3dd8218c26553598e78b83843389fa814bbcc68",
+    "checkpoint": "solver_learning\\runs\\u25-role2-10-h24-10000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u25-prpv2-requestdp-pareto_route_pool_v2-5000-1",
+    "score": [
+      16,
+      112,
+      290
+    ],
+    "signature": "df7d5dd20bc29ce6cc9fa16b79fa4f302086e6f9fe5e96db5b62ef8c87fd6967",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-requestdp-pareto_route_pool_v2-5000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-alns8-seedsweep-h24-8000-4",
+    "score": [
+      16,
+      112,
+      290
+    ],
+    "signature": "4011a80165990ded040129f12970605aa18b42b659b7e799cf05b1c8706d6b1b",
+    "checkpoint": "solver_learning\\runs\\u25-alns8-seedsweep-h24-8000-4.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u25-prpv2-cont-access-safe12-pareto_route_pool_v2-12000-1",
+    "score": [
+      16,
+      112,
+      289
+    ],
+    "signature": "8cef9c98834754a4f087bf4f2413fb00ac8e17254c83f2b631edb94bcc8cdbc3",
+    "checkpoint": "solver_learning\\runs\\u25-prpv2-cont-access-safe12-pareto_route_pool_v2-12000-1.json",
+    "family": "pareto_route_pool_v2"
+  },
+  {
+    "experiment_id": "u25-prp-v2-pareto_route_pool-10000-1",
+    "score": [
+      16,
+      112,
+      264
+    ],
+    "signature": "5323a464be46ee60d54193cbfed16cfc47f6977e710b769c2eb222f700683ce8",
+    "checkpoint": "solver_learning\\runs\\u25-prp-v2-pareto_route_pool-10000-1.json",
+    "family": "pareto_route_pool"
+  },
+  {
+    "experiment_id": "u25-generator-audit1s-palns-1000-1",
+    "score": [
+      16,
+      112,
+      264
+    ],
+    "signature": "e52d52e096d91d15d7d5e15e9d9e6d289435a23626c7cf2f41e5c97107fac048",
+    "checkpoint": "solver_learning\\runs\\u25-generator-audit1s-palns-1000-1.json",
+    "family": "palns"
+  },
+  {
+    "experiment_id": "u25-generator-audit1s-aco_ls-1000-1",
+    "score": [
+      16,
+      112,
+      237
+    ],
+    "signature": "40ad76f200d7418b807ad5e59043f65f28265e482188f8e20ead8f15c824f029",
+    "checkpoint": "solver_learning\\runs\\u25-generator-audit1s-aco_ls-1000-1.json",
+    "family": "aco_ls"
+  },
+  {
+    "experiment_id": "u25-prp-v1-pareto_route_pool-10000-1",
+    "score": [
+      16,
+      112,
+      229
+    ],
+    "signature": "252e917c731f94fd2522f38e21823f11e61c22181f209a9efd29061d82794b03",
+    "checkpoint": "solver_learning\\runs\\u25-prp-v1-pareto_route_pool-10000-1.json",
+    "family": "pareto_route_pool"
+  },
+  {
+    "experiment_id": "u25-generator-audit1s-aco-1000-1",
+    "score": [
+      16,
+      112,
+      227
+    ],
+    "signature": "d53670c40040e6f82c9f33935eab8b0935ed3d1649fd6d43dfae63b4a8e0aaf8",
+    "checkpoint": "solver_learning\\runs\\u25-generator-audit1s-aco-1000-1.json",
+    "family": "aco"
+  },
+  {
+    "experiment_id": "u24b-seed8d1-suffix-h24-3000-3",
+    "score": [
+      14,
+      70,
+      269
+    ],
+    "signature": "6824dcc1bc03b09311f691afcc649b39b965d73ee9d0e66af5ec24445749c421",
+    "checkpoint": "solver_learning\\runs\\u24b-seed8d1-suffix-h24-3000-3.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-seed8d1-suffix-h24-3000-4",
+    "score": [
+      14,
+      70,
+      269
+    ],
+    "signature": "048eb333aa9f83467e8de50a708cf732e44fbac38e1ab22dd229fb060e70c47a",
+    "checkpoint": "solver_learning\\runs\\u24b-seed8d1-suffix-h24-3000-4.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-seed8d1-suffix-h24-3000-1",
+    "score": [
+      14,
+      70,
+      269
+    ],
+    "signature": "8881540d5ab57a83feba01caace9a561aac22b3a2638b4d36b1e34e182617d19",
+    "checkpoint": "solver_learning\\runs\\u24b-seed8d1-suffix-h24-3000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u32-seed-screen-h24-3000-2",
+    "score": [
+      14,
+      70,
+      268
+    ],
+    "signature": "c8a8744f5aaf8bee3052a4b276c113e240e6f053c67048535b2b544e828c6cdc",
+    "checkpoint": "solver_learning\\runs\\u32-seed-screen-h24-3000-2.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-seed-screen-h24-3000-6",
+    "score": [
+      14,
+      70,
+      268
+    ],
+    "signature": "ae0a65080e5d0ee857b5b99f72fb66c6a4f4c4623c6f97b90849a2e4ab203666",
+    "checkpoint": "solver_learning\\runs\\u24b-seed-screen-h24-3000-6.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-seed-screen-h24-3000-8",
+    "score": [
+      14,
+      70,
+      268
+    ],
+    "signature": "2919be34d58a3243d656816759b7effb1b057db0b66783a70887bd03ef6d6050",
+    "checkpoint": "solver_learning\\runs\\u24b-seed-screen-h24-3000-8.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-seed8d1-suffix-h24-3000-6",
+    "score": [
+      14,
+      70,
+      268
+    ],
+    "signature": "fab28536f7edf7c72cded8b8138a95aa6a2a9bb01458b8ece7ce94e33bf88e68",
+    "checkpoint": "solver_learning\\runs\\u24b-seed8d1-suffix-h24-3000-6.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-seed8d1-deep-h24-10000-3",
+    "score": [
+      14,
+      70,
+      268
+    ],
+    "signature": "6cb648d042e5858c854ef5ac0695d11f1ba6a2f8ebf27880cd8a7a56a9903e0c",
+    "checkpoint": "solver_learning\\runs\\u24b-seed8d1-deep-h24-10000-3.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-seed8d1-suffix-h24-3000-2",
+    "score": [
+      14,
+      70,
+      268
+    ],
+    "signature": "7d567760ec457e96ee84475c724ae522ee5835abcaffce602f2e20c1d0c36444",
+    "checkpoint": "solver_learning\\runs\\u24b-seed8d1-suffix-h24-3000-2.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-cross-seed4d1-seed3-h24-3000-3",
+    "score": [
+      14,
+      70,
+      267
+    ],
+    "signature": "67a1d2fb7e71953318da575ef97479c374b797630694aa8880ec39a03c166f9a",
+    "checkpoint": "solver_learning\\runs\\u24b-cross-seed4d1-seed3-h24-3000-3.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u32-roleopt-final-h24-3000-1",
+    "score": [
+      14,
+      70,
+      265
+    ],
+    "signature": "0d8f705a997c6b29c4c052026797dc600ecf3ca948e091d071e3b7a467406a54",
+    "checkpoint": "solver_learning\\runs\\u32-roleopt-final-h24-3000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-seed-screen-h24-3000-3",
+    "score": [
+      14,
+      70,
+      265
+    ],
+    "signature": "7d751f5ea0b1a54f2503032fa5e3dd74e2c0cedf32892861c0d102a508b5ddba",
+    "checkpoint": "solver_learning\\runs\\u24b-seed-screen-h24-3000-3.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-seed-screen-h24-3000-4",
+    "score": [
+      14,
+      70,
+      265
+    ],
+    "signature": "3fb25216e44bafcd7b0ce5e1be8ae297aac5edd2092cedafb1c7a0834793ce8d",
+    "checkpoint": "solver_learning\\runs\\u24b-seed-screen-h24-3000-4.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-seed-screen-h24-3000-7",
+    "score": [
+      14,
+      70,
+      265
+    ],
+    "signature": "7a34babf7ce11eaf1db12c1ac176bc71075b8f2fa1f7f51f53cd9124f8fb934a",
+    "checkpoint": "solver_learning\\runs\\u24b-seed-screen-h24-3000-7.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-cross-seed3d1-seed4-h24-3000-4",
+    "score": [
+      14,
+      70,
+      264
+    ],
+    "signature": "e6046c00e2cec817b78bb7b179e0d281d0eb78fff93f8b69d59bcc8315028478",
+    "checkpoint": "solver_learning\\runs\\u24b-cross-seed3d1-seed4-h24-3000-4.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-seed-screen-h24-3000-2",
+    "score": [
+      14,
+      70,
+      262
+    ],
+    "signature": "a164df3e5addae5a17ad7239a81361150a670d485243ff84e1241f9a5d17c01b",
+    "checkpoint": "solver_learning\\runs\\u24b-seed-screen-h24-3000-2.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-seed-screen-h24-3000-5",
+    "score": [
+      14,
+      70,
+      261
+    ],
+    "signature": "382afeb44f0abf6638bad6f3a90c4047ff0884e720f2970a1b1a7045ebbef952",
+    "checkpoint": "solver_learning\\runs\\u24b-seed-screen-h24-3000-5.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-roleopt-final-h24-3000-1",
+    "score": [
+      14,
+      70,
+      260
+    ],
+    "signature": "43fdcdcc5a71503186c10a42332aba6bb6e0d5fb3cbbdd4c267305582dfb591e",
+    "checkpoint": "solver_learning\\runs\\u24b-roleopt-final-h24-3000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24b-d1-altfamily-mlns-3000-3",
+    "score": [
+      14,
+      70,
+      251
+    ],
+    "signature": "dc3c43612c076515178f1ece92af4831d4b1a28fac588da3b0a4bb78f519dbc8",
+    "checkpoint": "solver_learning\\runs\\u24b-d1-altfamily-mlns-3000-3.json",
+    "family": "mlns"
+  },
+  {
+    "experiment_id": "u24b-d1-altfamily-lns_dp-3000-3",
+    "score": [
+      14,
+      70,
+      201
+    ],
+    "signature": "560de1164670a43e6cff386d2f244d1abf59dfbbebfbe5857875dce36dede87d",
+    "checkpoint": "solver_learning\\runs\\u24b-d1-altfamily-lns_dp-3000-3.json",
+    "family": "lns_dp"
+  },
+  {
+    "experiment_id": "h08-v2h08-60000-1",
+    "score": [
+      13,
+      91,
+      225
+    ],
+    "signature": "34a76394e3e1610c464be9234e12c0fadeeb11800734c2daad7b8ca430410450",
+    "checkpoint": "solver_learning\\runs\\h08-v2h08-60000-1.json",
+    "family": "v2h08"
+  },
+  {
+    "experiment_id": "h17-v2h17-60000-1",
+    "score": [
+      13,
+      91,
+      225
+    ],
+    "signature": "b16e8c4fa1a54a7b35e270a63b12c345c202011d7d68bea43e6c52f518c27baf",
+    "checkpoint": "solver_learning\\runs\\h17-v2h17-60000-1.json",
+    "family": "v2h17"
+  },
+  {
+    "experiment_id": "audit-alns-3000-1",
+    "score": [
+      13,
+      91,
+      224
+    ],
+    "signature": "820199b2b4dc96b0db6f1bd2d2ef666a6c62b88095f4cb80b3ed938645843d5a",
+    "checkpoint": "solver_learning\\runs\\audit-alns-3000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "h03-v2-60000-1",
+    "score": [
+      13,
+      91,
+      224
+    ],
+    "signature": "fd749ac36051c5b2e928e5419d551d068a57095ddcb7491397366b69e459df2c",
+    "checkpoint": "solver_learning\\runs\\h03-v2-60000-1.json",
+    "family": "v2"
+  },
+  {
+    "experiment_id": "h07-alns-3000-4",
+    "score": [
+      13,
+      91,
+      224
+    ],
+    "signature": "0f43d742ecda5c6fe561b3d46ce23fd5f21802952fc7743f898645f2d54aea2a",
+    "checkpoint": "solver_learning\\runs\\h07-alns-3000-4.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "h09d5-alns-3000-2",
+    "score": [
+      13,
+      91,
+      224
+    ],
+    "signature": "8c3ec6464203b94c743994d271cbf1594d23cd01489936ff955e49cd585afd97",
+    "checkpoint": "solver_learning\\runs\\h09d5-alns-3000-2.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "h09d3-alns-3000-2",
+    "score": [
+      13,
+      91,
+      224
+    ],
+    "signature": "7f34cf82a8edcb02152d8c0eaaa982a0987f8f8457a92fed7d5ae627a29b3471",
+    "checkpoint": "solver_learning\\runs\\h09d3-alns-3000-2.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "h13-both-alns-3000-1",
+    "score": [
+      13,
+      91,
+      224
+    ],
+    "signature": "dd649e412f613aab63f48e06be6f68f4621f32ff98b11bec23e9c712e802c266",
+    "checkpoint": "solver_learning\\runs\\h13-both-alns-3000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "h19s4-v2h17-60000-4",
+    "score": [
+      13,
+      91,
+      224
+    ],
+    "signature": "a2e8c841d5fac9cfbf12530d3139e017743f84ab3522c98d7d5ca215d1e7bde0",
+    "checkpoint": "solver_learning\\runs\\h19s4-v2h17-60000-4.json",
+    "family": "v2h17"
+  },
+  {
+    "experiment_id": "h19s2-v2h17-60000-2",
+    "score": [
+      13,
+      91,
+      224
+    ],
+    "signature": "7f6da00ce9d57c6c4893849a2889e33847bb8642945c34dbbfb165d2567e597f",
+    "checkpoint": "solver_learning\\runs\\h19s2-v2h17-60000-2.json",
+    "family": "v2h17"
+  },
+  {
+    "experiment_id": "h21-v2h20-60000-1",
+    "score": [
+      13,
+      91,
+      224
+    ],
+    "signature": "626df24f59fbaf2b7aea6d421cd02453e8253efad6d1c8e36f4fbb1182be687e",
+    "checkpoint": "solver_learning\\runs\\h21-v2h20-60000-1.json",
+    "family": "v2h20"
+  },
+  {
+    "experiment_id": "audit-lns-3000-1",
+    "score": [
+      13,
+      91,
+      223
+    ],
+    "signature": "c76ebfd468b4dbe9c85681a5f7121131cb33c5f467b5224ec043e1059c632bde",
+    "checkpoint": "solver_learning\\runs\\audit-lns-3000-1.json",
+    "family": "lns"
+  },
+  {
+    "experiment_id": "audit20-alns-20000-1",
+    "score": [
+      13,
+      91,
+      223
+    ],
+    "signature": "fdddfe3ecf1ae1cc7a3127bbf8a19def69f00a7a69d4c370c2b12ca100447d5d",
+    "checkpoint": "solver_learning\\runs\\audit20-alns-20000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "h04-v2h04-20000-1",
+    "score": [
+      13,
+      91,
+      223
+    ],
+    "signature": "2269e11f7ee60a02001d32c95709f702fda847269621d8a4756fbee8927278c4",
+    "checkpoint": "solver_learning\\runs\\h04-v2h04-20000-1.json",
+    "family": "v2h04"
+  },
+  {
+    "experiment_id": "h04-ablation-v2h04-20000-1",
+    "score": [
+      13,
+      91,
+      223
+    ],
+    "signature": "90bec0114e3d70ef15661fe9ac0a0c544cfb36210061b95969708a98be5c4bab",
+    "checkpoint": "solver_learning\\runs\\h04-ablation-v2h04-20000-1.json",
+    "family": "v2h04"
+  },
+  {
+    "experiment_id": "h09d3-alns-3000-3",
+    "score": [
+      13,
+      91,
+      223
+    ],
+    "signature": "3b69ec14441ee6e1dcef4f8859f7b18bebd5b4aceb7c2319c6139d3001031c58",
+    "checkpoint": "solver_learning\\runs\\h09d3-alns-3000-3.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "h15-cont10-alns-3000-1",
+    "score": [
+      13,
+      91,
+      223
+    ],
+    "signature": "64dc1203dce06f0681b8d3b6de0755fb2e5831f18b57e6f5531bd8108c2330d7",
+    "checkpoint": "solver_learning\\runs\\h15-cont10-alns-3000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "h15-both-alns-3000-1",
+    "score": [
+      13,
+      91,
+      223
+    ],
+    "signature": "b208a70d546b93ee108b2226a94fa3fa7021dd085c7829f6418bd4f23f6f8e24",
+    "checkpoint": "solver_learning\\runs\\h15-both-alns-3000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "h20d3-v2h20-60000-4",
+    "score": [
+      13,
+      91,
+      223
+    ],
+    "signature": "3d573a953f3da7a319e0bce0c521507d91936f80f8419ae5f632ed4a798a88ed",
+    "checkpoint": "solver_learning\\runs\\h20d3-v2h20-60000-4.json",
+    "family": "v2h20"
+  },
+  {
+    "experiment_id": "h22-v2h22-60000-1",
+    "score": [
+      13,
+      91,
+      223
+    ],
+    "signature": "ea97c7602f4f904134fa92879ffc52e9d40ef20c1f76463c37ff5f06d22b81c4",
+    "checkpoint": "solver_learning\\runs\\h22-v2h22-60000-1.json",
+    "family": "v2h22"
+  },
+  {
+    "experiment_id": "h06-role100-alns-3000-1",
+    "score": [
+      13,
+      91,
+      222
+    ],
+    "signature": "c98aa4791ae384ff2a7483b155ca1771ba0a8fcd04b1b49806550d63ca76ec5c",
+    "checkpoint": "solver_learning\\runs\\h06-role100-alns-3000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "h05-v2h05-20000-1",
+    "score": [
+      13,
+      91,
+      222
+    ],
+    "signature": "f003ca5c9c6d6bd71829912d85a8c8890b124b6cc501578f0bf4970bc0d8c386",
+    "checkpoint": "solver_learning\\runs\\h05-v2h05-20000-1.json",
+    "family": "v2h05"
+  },
+  {
+    "experiment_id": "h13-cont40-alns-3000-1",
+    "score": [
+      13,
+      91,
+      222
+    ],
+    "signature": "75e27c1749d7683f36d9244aea21d1d37c617ac89a3b4ecb60c784bd92a7e5fc",
+    "checkpoint": "solver_learning\\runs\\h13-cont40-alns-3000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "baseline-v1-50000-1",
+    "score": [
+      13,
+      91,
+      221
+    ],
+    "signature": "0caba10905df48bb688123010a0e89ede0fbed88647811aa989e947f7327b97f",
+    "checkpoint": "solver_learning\\runs\\baseline-v1-50000-1.json",
+    "family": "v1"
+  },
+  {
+    "experiment_id": "h02-no-macro-v2-20000-1",
+    "score": [
+      13,
+      91,
+      221
+    ],
+    "signature": "51a853075fccc970af25d5fd36807a7be68d6161806124b470833756542d9d66",
+    "checkpoint": "solver_learning\\runs\\h02-no-macro-v2-20000-1.json",
+    "family": "v2"
+  },
+  {
+    "experiment_id": "h07-alns-3000-2",
+    "score": [
+      13,
+      91,
+      221
+    ],
+    "signature": "256c11c405e0cdeca6a8ed18c997dcc6a3854a0a5981a20b04be47e30bfc0b6c",
+    "checkpoint": "solver_learning\\runs\\h07-alns-3000-2.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "h15-aco-alns-3000-1",
+    "score": [
+      13,
+      91,
+      221
+    ],
+    "signature": "59317bee195f2295bb5ab53091819d7aa5212c3d5608a87b8744d20aeefb5a31",
+    "checkpoint": "solver_learning\\runs\\h15-aco-alns-3000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "h20d1-v2h20-60000-2",
+    "score": [
+      13,
+      91,
+      221
+    ],
+    "signature": "bb97e3593cfb87a8b9750f071729d4b07630262313eb1b7dd12d8205cde26e8b",
+    "checkpoint": "solver_learning\\runs\\h20d1-v2h20-60000-2.json",
+    "family": "v2h20"
+  },
+  {
+    "experiment_id": "h23s5-v2h20-60000-5",
+    "score": [
+      13,
+      91,
+      221
+    ],
+    "signature": "45b57a7a619d9d1285979dc07b6768522eaad65852599103040a1107b3cc59ad",
+    "checkpoint": "solver_learning\\runs\\h23s5-v2h20-60000-5.json",
+    "family": "v2h20"
+  },
+  {
+    "experiment_id": "audit-palns-3000-1",
+    "score": [
+      13,
+      91,
+      220
+    ],
+    "signature": "74c4e843687ad72025b37682f4eef2055d6635afc2ced833add394bded8ca02d",
+    "checkpoint": "solver_learning\\runs\\audit-palns-3000-1.json",
+    "family": "palns"
+  },
+  {
+    "experiment_id": "audit-stop_bp-3000-1",
+    "score": [
+      13,
+      91,
+      220
+    ],
+    "signature": "5df3d572687a0d1e2c946fb6d6f5f2e92013e532932b803008aaefece1c9f673",
+    "checkpoint": "solver_learning\\runs\\audit-stop_bp-3000-1.json",
+    "family": "stop_bp"
+  },
+  {
+    "experiment_id": "h02-v2-20000-1",
+    "score": [
+      13,
+      91,
+      220
+    ],
+    "signature": "5670b304609fd699aacde6d57c83bc1ad36fe322a3beb24d245647c3c842632a",
+    "checkpoint": "solver_learning\\runs\\h02-v2-20000-1.json",
+    "family": "v2"
+  },
+  {
+    "experiment_id": "h06-role010-alns-3000-1",
+    "score": [
+      13,
+      91,
+      220
+    ],
+    "signature": "8d24df4e4be790c75331f79393869f3edd6ac0e6d0ee2df3ec78d7d299f30857",
+    "checkpoint": "solver_learning\\runs\\h06-role010-alns-3000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "h23s6-v2h20-60000-6",
+    "score": [
+      13,
+      91,
+      220
+    ],
+    "signature": "11715c63a40647953c1b26802c7c940a50bb0538da74ef3f5b2985b4022ded8b",
+    "checkpoint": "solver_learning\\runs\\h23s6-v2h20-60000-6.json",
+    "family": "v2h20"
+  },
+  {
+    "experiment_id": "h07-alns-3000-3",
+    "score": [
+      13,
+      91,
+      219
+    ],
+    "signature": "1f7cf7f30b41f5d97ab07fe05cd20d23ee6351fe377d050c0cf654998d0a363b",
+    "checkpoint": "solver_learning\\runs\\h07-alns-3000-3.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "audit-v1-3000-1",
+    "score": [
+      13,
+      91,
+      217
+    ],
+    "signature": "4e9eeb282678350d586a87559d6b07ed295ddff4cc36127b94b10502629878ff",
+    "checkpoint": "solver_learning\\runs\\audit-v1-3000-1.json",
+    "family": "v1"
+  },
+  {
+    "experiment_id": "audit-mlns-3000-1",
+    "score": [
+      13,
+      91,
+      204
+    ],
+    "signature": "eb51b5fface322d601f2fe781f9c69c4c25a56d435ca57acd206483acd25ff42",
+    "checkpoint": "solver_learning\\runs\\audit-mlns-3000-1.json",
+    "family": "mlns"
+  },
+  {
+    "experiment_id": "audit-lns_dp-3000-1",
+    "score": [
+      13,
+      91,
+      203
+    ],
+    "signature": "6174a4d6c38d9a21a559743b619b8162945511bb2c72e0ca268d4137bc190f47",
+    "checkpoint": "solver_learning\\runs\\audit-lns_dp-3000-1.json",
+    "family": "lns_dp"
+  },
+  {
+    "experiment_id": "audit-aco_ls-3000-1",
+    "score": [
+      13,
+      91,
+      190
+    ],
+    "signature": "c63a5b67450fc9e8944b8f38434fe92aee0e7e399332a8aa10d573bbc8978988",
+    "checkpoint": "solver_learning\\runs\\audit-aco_ls-3000-1.json",
+    "family": "aco_ls"
+  },
+  {
+    "experiment_id": "audit-aco-3000-1",
+    "score": [
+      13,
+      91,
+      185
+    ],
+    "signature": "2025a68b04b9cad0b15a7fce18838409af201cfd56a05f3ab8a433270f03e429",
+    "checkpoint": "solver_learning\\runs\\audit-aco-3000-1.json",
+    "family": "aco"
+  },
+  {
+    "experiment_id": "u24-role-r2-alns-3000-1",
+    "score": [
+      10,
+      70,
+      213
+    ],
+    "signature": "912f2f9cf6cbae80ae680ec527f0998b93b03c4ee949410e6074181ea4f2be23",
+    "checkpoint": "solver_learning\\runs\\u24-role-r2-alns-3000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "u24-h24b-h24-3000-1",
+    "score": [
+      10,
+      70,
+      213
+    ],
+    "signature": "473a0c224a0c2241b26ca69567bb714d3d32c848fa788ef9b276306137ef8742",
+    "checkpoint": "solver_learning\\runs\\u24-h24b-h24-3000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24-role-r0-alns-3000-1",
+    "score": [
+      10,
+      70,
+      212
+    ],
+    "signature": "5e55d325a5f5f76ef023fc58385d2112d615884d44ce1ebbcb0009730d229117",
+    "checkpoint": "solver_learning\\runs\\u24-role-r0-alns-3000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "u24-roleopt-final-h24-3000-1",
+    "score": [
+      10,
+      70,
+      212
+    ],
+    "signature": "b601e11a75f93d350b6d683b3e76f74324feb318d14b3639735b1b19490bed07",
+    "checkpoint": "solver_learning\\runs\\u24-roleopt-final-h24-3000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24-role-r3-alns-3000-1",
+    "score": [
+      10,
+      70,
+      198
+    ],
+    "signature": "beba521ebd8c8cf35e7a00b82eae3f5abf67195e229002901a3c41fa41be0c4d",
+    "checkpoint": "solver_learning\\runs\\u24-role-r3-alns-3000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "u24-role1k-r1-alns-1000-1",
+    "score": [
+      10,
+      70,
+      198
+    ],
+    "signature": "13b34596bae7147db630d7bc9c35e597d92e68cb5c2aef68f1485b166f6ca561",
+    "checkpoint": "solver_learning\\runs\\u24-role1k-r1-alns-1000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "u24-role-r1-alns-3000-1",
+    "score": [
+      10,
+      70,
+      196
+    ],
+    "signature": "592e621b0df52728d251dd72f35689e4c88a5ecfaa751f0033d970cf5b790e87",
+    "checkpoint": "solver_learning\\runs\\u24-role-r1-alns-3000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "u24-role1k-r2-alns-1000-1",
+    "score": [
+      10,
+      70,
+      194
+    ],
+    "signature": "b4aa68a15836123cef7d10fea625f5a7cde37ffc2bf0c924c94c270173b419f1",
+    "checkpoint": "solver_learning\\runs\\u24-role1k-r2-alns-1000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "u24-role1k-r3-alns-1000-1",
+    "score": [
+      10,
+      70,
+      190
+    ],
+    "signature": "79287b21002c0cd74a20e7f0d3e9972d83b16ffd32a910abd66c20e6d6a3082d",
+    "checkpoint": "solver_learning\\runs\\u24-role1k-r3-alns-1000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "u24-role-r4-alns-3000-1",
+    "score": [
+      10,
+      70,
+      187
+    ],
+    "signature": "dc7954a2164050a05c5f06f94bf6e593b1ada4fae192df21db4fa369c15317d4",
+    "checkpoint": "solver_learning\\runs\\u24-role-r4-alns-3000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "u24-h24-h24-3000-1",
+    "score": [
+      10,
+      70,
+      183
+    ],
+    "signature": "df7581e50fa5b2f15836391ed7ef9d5bd5fa3d6a3160997aa12c33c444ed7526",
+    "checkpoint": "solver_learning\\runs\\u24-h24-h24-3000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24-h00-alns-20000-1",
+    "score": [
+      10,
+      70,
+      180
+    ],
+    "signature": "702c6864dfbfe1f51f331fc239dda909759e7547d552ccf05826c8fe4daee2bd",
+    "checkpoint": "solver_learning\\runs\\u24-h00-alns-20000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "u24-h00-v2h17-20000-1",
+    "score": [
+      10,
+      70,
+      179
+    ],
+    "signature": "d0fa09dc64b68ec08745b309b87a8a7eb5d4a103db1442be84231b548a3b0117",
+    "checkpoint": "solver_learning\\runs\\u24-h00-v2h17-20000-1.json",
+    "family": "v2h17"
+  },
+  {
+    "experiment_id": "u24-role1k-r4-alns-1000-1",
+    "score": [
+      10,
+      70,
+      176
+    ],
+    "signature": "8657fb086d8a2d41938384eefc6d04b53ec0ca12e397b8b04002576528d6dbf4",
+    "checkpoint": "solver_learning\\runs\\u24-role1k-r4-alns-1000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "u24-role2-r24-h24-1000-1",
+    "score": [
+      10,
+      70,
+      169
+    ],
+    "signature": "7fe6917a2211461f5f345a88b70803a9236f3b9562fcfd9631ed90a4936386d0",
+    "checkpoint": "solver_learning\\runs\\u24-role2-r24-h24-1000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24-role2-r14-h24-1000-1",
+    "score": [
+      10,
+      70,
+      168
+    ],
+    "signature": "eeeb3d3b8ed52d692d5ecd7541d3c4e71d25f75229775ff713b739dc7c8afa6a",
+    "checkpoint": "solver_learning\\runs\\u24-role2-r14-h24-1000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24-role2-r03-h24-1000-1",
+    "score": [
+      10,
+      70,
+      166
+    ],
+    "signature": "7b8d77dc6785192e1615b55f85c746ffbef35a24988e396b67df0202004a4bb6",
+    "checkpoint": "solver_learning\\runs\\u24-role2-r03-h24-1000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24-role2-r23-h24-1000-1",
+    "score": [
+      10,
+      70,
+      166
+    ],
+    "signature": "171d986e48c0c4f8e0d54b44161e5beaebad2d66dc4cc365415cd66506d87219",
+    "checkpoint": "solver_learning\\runs\\u24-role2-r23-h24-1000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24-role2-r13-h24-1000-1",
+    "score": [
+      10,
+      70,
+      166
+    ],
+    "signature": "7fd102a86f07790f7544b63ee5b7095a6c1ac6725631078d7787ca0e35eb0632",
+    "checkpoint": "solver_learning\\runs\\u24-role2-r13-h24-1000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24-role2-r34-h24-1000-1",
+    "score": [
+      10,
+      70,
+      166
+    ],
+    "signature": "07b66418e78b9ea69b692fcb76dd9796db3661f3d3e5df1276ee1121ac6adafb",
+    "checkpoint": "solver_learning\\runs\\u24-role2-r34-h24-1000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24-role2-r04-h24-1000-1",
+    "score": [
+      10,
+      70,
+      165
+    ],
+    "signature": "76b4d2f4ab4c35a5e24d2f77f1e6cf2768b539824db999a49a8df444f47b4b90",
+    "checkpoint": "solver_learning\\runs\\u24-role2-r04-h24-1000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24-role2-r02-h24-1000-1",
+    "score": [
+      10,
+      70,
+      165
+    ],
+    "signature": "918bc7c76a8ef0dac9d31f646e70f8dbfaa1766a7b86ad42784a8780d3072acd",
+    "checkpoint": "solver_learning\\runs\\u24-role2-r02-h24-1000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24-role2-r12-h24-1000-1",
+    "score": [
+      10,
+      70,
+      165
+    ],
+    "signature": "2f885dcbc2cf6c1a47e4f4058e9d80be1493c8a9138b7e645a56a9a5cd03fcfe",
+    "checkpoint": "solver_learning\\runs\\u24-role2-r12-h24-1000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u24-proxy-lns_dp-r3-lns_dp-100-1",
+    "score": [
+      10,
+      70,
+      98
+    ],
+    "signature": "d6a69a164cfe508283b8c11ce1660f6ce205411647645ff3d2a6df5ef0f29a03",
+    "checkpoint": "solver_learning\\runs\\u24-proxy-lns_dp-r3-lns_dp-100-1.json",
+    "family": "lns_dp"
+  },
+  {
+    "experiment_id": "u16-roleopt-final-h24-3000-1",
+    "score": [
+      8,
+      48,
+      94
+    ],
+    "signature": "c2671557c0a8ea97816014561a168d6d78241b56bfa26ec4894dd7830d4d6740",
+    "checkpoint": "solver_learning\\runs\\u16-roleopt-final-h24-3000-1.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u16-solve10-alns-10000-1",
+    "score": [
+      8,
+      48,
+      94
+    ],
+    "signature": "5a4cf6796b304028e0baaf2e653ee132304653ac858780db7669d54fdf11a5a9",
+    "checkpoint": "solver_learning\\runs\\u16-solve10-alns-10000-1.json",
+    "family": "alns"
+  },
+  {
+    "experiment_id": "u16-crossday20-v2h17-20000-1",
+    "score": [
+      8,
+      48,
+      94
+    ],
+    "signature": "a41ccf3adc7c3db3e71259e66e92b7d56719fe20135ba98113add9da67615b20",
+    "checkpoint": "solver_learning\\runs\\u16-crossday20-v2h17-20000-1.json",
+    "family": "v2h17"
+  },
+  {
+    "experiment_id": "u16-seed-screen-h24-3000-2",
+    "score": [
+      8,
+      48,
+      94
+    ],
+    "signature": "f3d032ac115ca977502ac0bb05c3caaf063a3a567cdc80c5daeb2431234e402c",
+    "checkpoint": "solver_learning\\runs\\u16-seed-screen-h24-3000-2.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u16-role3-deep-h24-10000-3",
+    "score": [
+      8,
+      48,
+      89
+    ],
+    "signature": "c24eeb0a0e01fb309044519c59c444cb391872553702391fc43df4466fe16892",
+    "checkpoint": "solver_learning\\runs\\u16-role3-deep-h24-10000-3.json",
+    "family": "h24"
+  },
+  {
+    "experiment_id": "u25-boundary-parent-alns8-r0-s1",
+    "score": [
+      16,
+      112,
+      323
+    ],
+    "signature": "98146796cdb21525932f091625479b34dde99d4684c3dafcacf39829d3067953",
+    "checkpoint": "solver_learning\\runs\\u25-boundary-parent-alns8-r0-s1.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-boundary-v1-r0-s1",
+    "score": [
+      16,
+      112,
+      323
+    ],
+    "signature": "edb0bd2911f19ce3648b6c733eb19d5eee0ea5d2b44c67fc184aee8f6464d643",
+    "checkpoint": "solver_learning\\runs\\u25-boundary-v1-r0-s1.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-boundary-v2-profile-user-input-25x25-match-s1",
+    "score": [
+      16,
+      112,
+      326
+    ],
+    "signature": "dde5849a41550139fc3261c81e99138728d19f717a89fa8b31d8279f59f5fc93",
+    "checkpoint": "solver_learning\\runs\\u25-boundary-v2-profile-user-input-25x25-match-s1.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-boundary-v2-profile-user-input-25x25-match-s2",
+    "score": [
+      16,
+      112,
+      325
+    ],
+    "signature": "46f6ac1f021b47c93cc23e418c5b5b800d7e1bcfa3ec9043fa75a2a10f59f0e4",
+    "checkpoint": "solver_learning\\runs\\u25-boundary-v2-profile-user-input-25x25-match-s2.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-boundary-v2-profile-user-input-25x25-match-s3",
+    "score": [
+      16,
+      112,
+      324
+    ],
+    "signature": "4c59869773d93c52ed3c0bd4061ae80e824a17c67a195511af6e84d07951bef1",
+    "checkpoint": "solver_learning\\runs\\u25-boundary-v2-profile-user-input-25x25-match-s3.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-boundary-v3-profile-user-input-25x25-match-s1",
+    "score": [
+      16,
+      112,
+      325
+    ],
+    "signature": "fb74a8f2763f35bde3938aca301f29170cc28871bf4310cfc4536fc540052209",
+    "checkpoint": "solver_learning\\runs\\u25-boundary-v3-profile-user-input-25x25-match-s1.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-boundary-v3-profile-user-input-25x25-match-s2",
+    "score": [
+      16,
+      112,
+      325
+    ],
+    "signature": "cd70b86dc8a28d37d323141de05cbd97a3fd42ff90a705f480a29694d4c0b5f8",
+    "checkpoint": "solver_learning\\runs\\u25-boundary-v3-profile-user-input-25x25-match-s2.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-boundary-v3-profile-user-input-25x25-match-s3",
+    "score": [
+      16,
+      112,
+      325
+    ],
+    "signature": "1fd13f43379a1fe87806f69d77f43700e8a0fa1359b35e688b868a24d2bf48d3",
+    "checkpoint": "solver_learning\\runs\\u25-boundary-v3-profile-user-input-25x25-match-s3.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-alns8-profile-user-input-25x25-match-s1",
+    "score": [
+      16,
+      112,
+      323
+    ],
+    "signature": "f2710484a9cf584763a4297569bf7907101fd05f532085de272cc5a782bbc060",
+    "checkpoint": "solver_learning\\runs\\u25-alns8-profile-user-input-25x25-match-s1.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-alns8-profile-user-input-25x25-match-s2",
+    "score": [
+      16,
+      112,
+      323
+    ],
+    "signature": "934008d4152b6c5278b22881698f7eca997459a68c7b95f204824174a89eaddd",
+    "checkpoint": "solver_learning\\runs\\u25-alns8-profile-user-input-25x25-match-s2.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-alns8-profile-user-input-25x25-match-s3",
+    "score": [
+      16,
+      112,
+      323
+    ],
+    "signature": "279ac030b2ba5233ea2365437775f2cb9b9071d432543187d60f1baa994f5dfe",
+    "checkpoint": "solver_learning\\runs\\u25-alns8-profile-user-input-25x25-match-s3.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-boundary-preview-final-user-input-25x25-match-s1",
+    "score": [
+      16,
+      112,
+      326
+    ],
+    "signature": "a31a7545174a83c9a5ef02fb5ab36594baa4fec5d913b83c31807a1ca8a9e582",
+    "checkpoint": "solver_learning\\runs\\u25-boundary-preview-final-user-input-25x25-match-s1.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-boundary-preview-final-user-input-25x25-match-s2",
+    "score": [
+      16,
+      112,
+      326
+    ],
+    "signature": "5a2ab9ffc2c4e2c7a0f79d97b52cb1b88f2cd498870f1de0e203c7385d088f23",
+    "checkpoint": "solver_learning\\runs\\u25-boundary-preview-final-user-input-25x25-match-s2.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-boundary-preview-final-user-input-25x25-match-s3",
+    "score": [
+      16,
+      112,
+      325
+    ],
+    "signature": "ccac64c3cb4cc28ba1c4a6aa29feb0f67dd864d811c5efd1a6b5de9a2d0f33ab",
+    "checkpoint": "solver_learning\\runs\\u25-boundary-preview-final-user-input-25x25-match-s3.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-boundary-wide-verified-build-user-input-25x25-match-s1",
+    "score": [
+      16,
+      112,
+      324
+    ],
+    "signature": "aa990df244d16d1b4ff664dc0ac602997fcce593623e6027f10cc3694cbdd9f3",
+    "checkpoint": "solver_learning\\runs\\u25-boundary-wide-verified-build-user-input-25x25-match-s1.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-same-exe-control-user-input-25x25-match-s1",
+    "score": [
+      16,
+      112,
+      323
+    ],
+    "signature": "4937aba0ba2e0062cd6955865c4508a4b402cdb06185bf996a6cc9d4ff1e2715",
+    "checkpoint": "solver_learning\\runs\\u25-same-exe-control-user-input-25x25-match-s1.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-same-exe-control-user-input-25x25-match-s2",
+    "score": [
+      16,
+      112,
+      321
+    ],
+    "signature": "0ae780dd8ec0a377beef0d67f792e2b6434fda200520899d63eb14df37f54eb8",
+    "checkpoint": "solver_learning\\runs\\u25-same-exe-control-user-input-25x25-match-s2.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-same-exe-control-user-input-25x25-match-s3",
+    "score": [
+      16,
+      112,
+      318
+    ],
+    "signature": "88af37ab5d067e5b98f26a9c70f5eb683d25972ccf6865390a7d4d787f124816",
+    "checkpoint": "solver_learning\\runs\\u25-same-exe-control-user-input-25x25-match-s3.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-preview-release-confirm-user-input-25x25-match-s2",
+    "score": [
+      16,
+      112,
+      326
+    ],
+    "signature": "83661afb84bbf0e345751ffb69af8b4718034b44590f258c8a7007cf582be5a3",
+    "checkpoint": "solver_learning\\runs\\u25-preview-release-confirm-user-input-25x25-match-s2.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-preview-release-confirm-user-input-25x25-match-s3",
+    "score": [
+      16,
+      112,
+      324
+    ],
+    "signature": "0029c18fcf2879f7e7363d96776b2863a3e6250d9efcb7a8c772546659f371a1",
+    "checkpoint": "solver_learning\\runs\\u25-preview-release-confirm-user-input-25x25-match-s3.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "u25-preview-release-smoke-user-input-25x25-match-s1",
+    "score": [
+      16,
+      112,
+      324
+    ],
+    "signature": "245039ae11bf44ea75a1f5b97e47ff8326b17a33bc31fd7bf994ba7bb7ebd32a",
+    "checkpoint": "solver_learning\\runs\\u25-preview-release-smoke-user-input-25x25-match-s1.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  },
+  {
+    "experiment_id": "h61-full-q3s1-user-input-25x25-match-s1",
+    "score": [
+      16,
+      112,
+      326
+    ],
+    "signature": "bf39291ab4b905a0e3cf4acb88ab042a7c0edf0e1dd74ad9a9e4abd9c5184c2b",
+    "checkpoint": "solver_learning\\runs\\h61-full-q3s1-user-input-25x25-match-s1.json",
+    "family": "boundary_pool_study",
+    "comparison_group": {
+      "config_sha256": "f9c57c7f2996116fab091418f678586bdfde1e3c27b23e2ee45c60278e44061f",
+      "roles": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "traffic_model": "idle",
+      "mode": "match"
+    },
+    "offline_only": true
+  }
+]

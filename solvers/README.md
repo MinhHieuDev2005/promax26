@@ -5,7 +5,7 @@
 1. Mở lại GUI nếu đang chạy phiên bản cũ.
 2. Bấm **+ Thêm solver EXE** cạnh danh sách **Solver Thuật toán** (hoặc trong
    tab **Kho Solver & Hướng Dẫn**).
-3. Chọn EXE tin cậy, nhập tên, ví dụ `MySolver`.
+3. Chọn EXE hoặc Python `.py` tin cậy, nhập tên, ví dụ `MySolver`.
 4. Chọn kiểu EXE trong hộp thoại: **Có = Bot HTTP**, **Không = Runner JSON**.
 5. Mục **HTTP: MySolver** hoặc **EXE: MySolver** xuất hiện và được chọn ngay.
 
@@ -14,6 +14,7 @@ nguyên. Runner JSON mới cũng có trong hai danh sách chọn ở Arena 1v1 v
 Auto-Race ALL; không tự thêm đội vào các giải đấu 4/6 đội định sẵn.
 Danh sách lưu tại `solvers/registered.json`, mở lại GUI vẫn còn. GUI chỉ lưu
 đường dẫn, không sao chép executable: giữ nguyên vị trí EXE, DLL và tài nguyên.
+File `.py` chỉ dùng giao thức Runner JSON; Bot HTTP vẫn yêu cầu `.exe`.
 File cấu hình này là cục bộ, không đưa vào Git.
 
 Để xóa, chọn mục **EXE: <tên>** hoặc **HTTP: <tên>**, bấm **Xóa solver**

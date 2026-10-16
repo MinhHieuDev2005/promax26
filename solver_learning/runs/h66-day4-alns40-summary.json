@@ -1,0 +1,13 @@
+{
+  "solver_learning/runs/h61-full-q3s1-user-input-25x25-match-s1.json": {
+    "n": 1,
+    "mean": 33,
+    "median": 33,
+    "min": 33,
+    "max": 33,
+    "stddev": 0.0,
+    "invalid": 0,
+    "coverage_failures": 0,
+    "deadline_failures": 0
+  }
+}

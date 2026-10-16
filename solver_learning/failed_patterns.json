@@ -1,0 +1,29 @@
+[
+  {
+    "case": "user-input-24x24",
+    "idea": "Use H17 Chokudai planning after applying the one-refuel role correction",
+    "result": [10, 70, 183],
+    "parent_result": [10, 70, 213],
+    "evidence": "solver_learning/runs/u24-h24-h24-3000-1.json",
+    "lesson": "The role correction is valuable, but H17 planning discards the production ALNS trajectory on this case. Keep production ALNS as H24's plan engine."
+  },
+  {
+    "case": "user-input-25x25; roles [1,0,0,0]; idle opponents",
+    "idea": "Increase boundary continuation width from four to eight without a cheap ranking stage",
+    "result": [16, 112, 324],
+    "evidence": "solver_learning/runs/u25-boundary-wide-verified-build-user-input-25x25-match-s1.json",
+    "lesson": "The measured run consumed up to about 42.3 seconds per day without beating the narrower pool family. This single run rejects default promotion, not the algorithm universally; try cheaper preview ranking first."
+  },
+  {
+    "case": "user-input-25x25; fixed day-3 checkpoint",
+    "idea": "Bounded one/two-car tail Chokudai as an additional route-pool improvement",
+    "evidence": "solver_learning/runs/u25-boundary-chokudai-fixed3-u25-boundary-parent-alns8-r0-s1-day3-s1.json",
+    "lesson": "The run generated 1288 macro candidates, but the selected 54+34 two-day forecast came from DP/pool, not tail search. No independent gain established; keep the optional operator disabled pending a positive ablation. Forecasts are not final match scores."
+  },
+  {
+    "case": "16x16/24x24/32x32 supplied cases; first day only; two seeds",
+    "idea": "Promote the boundary-preview solver as a universal default based on the 25x25 gains",
+    "evidence": "solver_learning/runs/boundary-release-cross-crosscheck.json",
+    "lesson": "Four ties and two one-bowl losses; all preview runs retained their ALNS seed. Timing-dependent seed generation differs, so this is not proof the pool harms routes, but the general non-regression/promotion gate is not met. Do not replace legacy defaults."
+  }
+]

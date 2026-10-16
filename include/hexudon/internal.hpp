@@ -242,6 +242,9 @@ std::vector<ActionPlan> refuel_staging_variants(
 
 AcoGraph build_aco_graph(const MapConfig& config, const DayInfo& day,
                          const std::vector<int>& extra_nodes = {});
+AcoGraph build_exact_pareto_graph(const MapConfig& config,
+                                  const DayInfo& day,
+                                  const std::vector<int>& extra_nodes = {});
 std::vector<AcoMeetingList> build_aco_meeting_cache(const AcoGraph& graph,
                                                     std::size_t capacity = 6);
 std::vector<int> alns_transit_nodes(const MapConfig& config,
@@ -294,6 +297,20 @@ ActionPlan build_lns_plan(const MapConfig& config, const DayInfo& day,
                           const AcoGraph* shared_graph = nullptr,
                           const std::vector<AcoMeetingList>* shared_meetings =
                               nullptr);
+ActionPlan build_bsr_vlns_plan(const MapConfig& config, const DayInfo& day,
+                               const PolicyHistory& history,
+                               const AgentTypes& types,
+                               const SearchLimits& limits, int displacement);
+ActionPlan build_strategic_sa_plan(const MapConfig& config,
+                                   const DayInfo& day,
+                                   const PolicyHistory& history,
+                                   const AgentTypes& types,
+                                   const SearchLimits& limits);
+ActionPlan build_pareto_rcsp_plan(const MapConfig& config,
+                                  const DayInfo& day,
+                                  const PolicyHistory& history,
+                                  const AgentTypes& types,
+                                  const SearchLimits& limits);
 ActionPlan build_alns_plan(const MapConfig& config, const DayInfo& day,
                            const PolicyHistory& history,
                            const AgentTypes& types, const SearchLimits& limits,

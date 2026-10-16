@@ -1,0 +1,26 @@
+{
+  "experiment_id": "h62-shortday-joint-tail-s1",
+  "parent": "h56-shortday-v1",
+  "solver": "short_day_runner",
+  "changes": ["bounded two-vehicle tail staging", "jointStage opt-in"],
+  "parameters": {
+    "roles": [0, 0, 1, 0],
+    "budget_ms": 45000,
+    "traffic": "idle",
+    "seed": 1,
+    "joint_stage": true,
+    "max_stage_options_per_vehicle": 24
+  },
+  "criterion_1": true,
+  "criterion_2": true,
+  "udon": 324,
+  "daily_udon": [50, 51, 54, 34, 47, 34, 54],
+  "runtime_max_ms": 41268,
+  "peak_rss_mib": 24,
+  "status": "rejected",
+  "notes": [
+    "ties prior short-day runner",
+    "below verified boundary release 326",
+    "default disabled"
+  ]
+}

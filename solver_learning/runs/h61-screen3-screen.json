@@ -1,0 +1,509 @@
+{
+  "scope": "fixed state only, independent time-limited ALNS seeds; not a paired fixed-incumbent ablation",
+  "rows": [
+    {
+      "variant": "control",
+      "checkpoint": "solver_learning\\runs\\h61-screen3-control-u25-preview-release-confirm-user-input-25x25-match-s2-day3-s1.json",
+      "score_today": 54,
+      "rollouts": [
+        {
+          "origin": "alns",
+          "today": 54,
+          "tomorrow": 33,
+          "sum": 87,
+          "boundary_positions": [
+            623,
+            623,
+            623,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            233,
+            233
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 33,
+          "sum": 87,
+          "boundary_positions": [
+            623,
+            623,
+            548,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            153,
+            233
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 34,
+          "sum": 88,
+          "boundary_positions": [
+            623,
+            623,
+            447,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            88,
+            233
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 32,
+          "sum": 86,
+          "boundary_positions": [
+            623,
+            623,
+            623,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            233,
+            233
+          ]
+        }
+      ],
+      "wall_ms": 26356.9170999981,
+      "peak_rss_bytes": 148430848,
+      "valid": true,
+      "coverage": true,
+      "within_budget": true
+    },
+    {
+      "variant": "endpoints",
+      "checkpoint": "solver_learning\\runs\\h61-screen3-endpoints-u25-preview-release-confirm-user-input-25x25-match-s2-day3-s1.json",
+      "score_today": 54,
+      "rollouts": [
+        {
+          "origin": "alns",
+          "today": 54,
+          "tomorrow": 31,
+          "sum": 85,
+          "boundary_positions": [
+            623,
+            623,
+            623,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            233,
+            233
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 34,
+          "sum": 88,
+          "boundary_positions": [
+            623,
+            447,
+            47,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            166,
+            84,
+            233
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 33,
+          "sum": 87,
+          "boundary_positions": [
+            623,
+            584,
+            240,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            115,
+            211,
+            233
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 33,
+          "sum": 87,
+          "boundary_positions": [
+            623,
+            623,
+            623,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            233,
+            233
+          ]
+        }
+      ],
+      "wall_ms": 29835.834700003034,
+      "peak_rss_bytes": 148226048,
+      "valid": true,
+      "coverage": true,
+      "within_budget": true
+    },
+    {
+      "variant": "more_endpoints",
+      "checkpoint": "solver_learning\\runs\\h61-screen3-more_endpoints-u25-preview-release-confirm-user-input-25x25-match-s2-day3-s1.json",
+      "score_today": 54,
+      "rollouts": [
+        {
+          "origin": "alns",
+          "today": 54,
+          "tomorrow": 31,
+          "sum": 85,
+          "boundary_positions": [
+            623,
+            623,
+            623,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            233,
+            233
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 34,
+          "sum": 88,
+          "boundary_positions": [
+            623,
+            447,
+            47,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            219,
+            157,
+            233
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 33,
+          "sum": 87,
+          "boundary_positions": [
+            623,
+            623,
+            47,
+            482
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            157,
+            147
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 31,
+          "sum": 85,
+          "boundary_positions": [
+            623,
+            623,
+            623,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            233,
+            233
+          ]
+        }
+      ],
+      "wall_ms": 29207.1111999976,
+      "peak_rss_bytes": 148201472,
+      "valid": true,
+      "coverage": true,
+      "within_budget": true
+    },
+    {
+      "variant": "slack1",
+      "checkpoint": "solver_learning\\runs\\h61-screen3-slack1-u25-preview-release-confirm-user-input-25x25-match-s2-day3-s1.json",
+      "score_today": 54,
+      "rollouts": [
+        {
+          "origin": "alns",
+          "today": 54,
+          "tomorrow": 32,
+          "sum": 86,
+          "boundary_positions": [
+            623,
+            623,
+            623,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            233,
+            233
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 33,
+          "sum": 87,
+          "boundary_positions": [
+            623,
+            584,
+            240,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            165,
+            211,
+            233
+          ]
+        },
+        {
+          "origin": "slack_endpoint_pool",
+          "today": 53,
+          "tomorrow": 34,
+          "sum": 87,
+          "boundary_positions": [
+            623,
+            147,
+            623,
+            38
+          ],
+          "boundary_fuel": [
+            233,
+            182,
+            233,
+            154
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 33,
+          "sum": 87,
+          "boundary_positions": [
+            623,
+            623,
+            623,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            233,
+            233
+          ]
+        }
+      ],
+      "wall_ms": 31755.416500003776,
+      "peak_rss_bytes": 148336640,
+      "valid": true,
+      "coverage": true,
+      "within_budget": true
+    },
+    {
+      "variant": "slack2",
+      "checkpoint": "solver_learning\\runs\\h61-screen3-slack2-u25-preview-release-confirm-user-input-25x25-match-s2-day3-s1.json",
+      "score_today": 54,
+      "rollouts": [
+        {
+          "origin": "alns",
+          "today": 54,
+          "tomorrow": 31,
+          "sum": 85,
+          "boundary_positions": [
+            623,
+            623,
+            623,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            233,
+            233
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 33,
+          "sum": 87,
+          "boundary_positions": [
+            623,
+            584,
+            240,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            115,
+            211,
+            233
+          ]
+        },
+        {
+          "origin": "slack_endpoint_pool",
+          "today": 53,
+          "tomorrow": 34,
+          "sum": 87,
+          "boundary_positions": [
+            623,
+            147,
+            623,
+            38
+          ],
+          "boundary_fuel": [
+            233,
+            151,
+            233,
+            118
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 32,
+          "sum": 86,
+          "boundary_positions": [
+            623,
+            623,
+            623,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            233,
+            233
+          ]
+        }
+      ],
+      "wall_ms": 31660.5098,
+      "peak_rss_bytes": 148303872,
+      "valid": true,
+      "coverage": true,
+      "within_budget": true
+    },
+    {
+      "variant": "chokudai",
+      "checkpoint": "solver_learning\\runs\\h61-screen3-chokudai-u25-preview-release-confirm-user-input-25x25-match-s2-day3-s1.json",
+      "score_today": 53,
+      "rollouts": [
+        {
+          "origin": "alns",
+          "today": 54,
+          "tomorrow": 31,
+          "sum": 85,
+          "boundary_positions": [
+            623,
+            623,
+            623,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            233,
+            233
+          ]
+        },
+        {
+          "origin": "slack_endpoint_pool",
+          "today": 53,
+          "tomorrow": 34,
+          "sum": 87,
+          "boundary_positions": [
+            623,
+            202,
+            47,
+            584
+          ],
+          "boundary_fuel": [
+            233,
+            185,
+            194,
+            148
+          ]
+        },
+        {
+          "origin": "slack_endpoint_pool",
+          "today": 53,
+          "tomorrow": 34,
+          "sum": 87,
+          "boundary_positions": [
+            623,
+            147,
+            623,
+            38
+          ],
+          "boundary_fuel": [
+            233,
+            199,
+            233,
+            172
+          ]
+        },
+        {
+          "origin": "free_endpoint_pool",
+          "today": 54,
+          "tomorrow": 32,
+          "sum": 86,
+          "boundary_positions": [
+            623,
+            623,
+            623,
+            623
+          ],
+          "boundary_fuel": [
+            233,
+            233,
+            233,
+            233
+          ]
+        }
+      ],
+      "wall_ms": 31207.55599999393,
+      "peak_rss_bytes": 148234240,
+      "valid": true,
+      "coverage": true,
+      "within_budget": true
+    }
+  ]
+}
