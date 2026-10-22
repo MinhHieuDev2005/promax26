@@ -1,0 +1,49 @@
+--- a/src/planner/day_planner.cpp
++++ b/src/planner/day_planner.cpp
+@@ -376,6 +376,46 @@
+         }
+         if (t < steps) acts.push_back(-(steps - t));
+     }
++    if (!lastDay) {
++        auto assigned = brandsOf(routes);
++        for (int patrol = 0; patrol < P; ++patrol) {
++            if (!routes[patrol].empty() || startSpot[patrol] >= 0) continue;
++            const int origin = st[patrolIds[patrol]].pos;
++            long long remainingSteps = 0;
++            for (int future = dayIndex + 1; future < D; ++future) remainingSteps += daySteps[future];
++            const int fuel = st[patrolIds[patrol]].fuel;
++            const int tomorrowFuel = supplyIds.empty()
++                ? fuel - fuel * (remainingSteps - daySteps[dayIndex + 1]) / remainingSteps : fuel;
++            int target = -1;
++            for (int spot = 0; spot < S; ++spot) {
++                const int brand = spots[spot].brand;
++                if (assigned[brand] || before[brand]) continue;
++                const auto& table = cheap(origin);
++                if (table.f[spots[spot].pos] > st[patrolIds[patrol]].fuel) continue;
++                if (table.f[spots[spot].pos] <= tomorrowFuel
++                    && table.t[spots[spot].pos] <= daySteps[dayIndex + 1]) continue;
++                if (target < 0 || table.t[spots[spot].pos] < table.t[spots[target].pos]) target = spot;
++            }
++            if (target < 0) continue;
++            const auto& path = pathCells(origin, spots[target].pos, 1);
++            vector<int> prefix{origin};
++            int usedTime = 0, usedFuel = 0;
++            for (size_t index = 1; index < path.size(); ++index) {
++                const int timeCost = stepCost(path[index - 1], router.status);
++                const int gasCost = fuelCost(path[index - 1]);
++                if (usedTime + timeCost > steps || usedFuel + gasCost > startFuel[patrol]) break;
++                usedTime += timeCost;
++                usedFuel += gasCost;
++                prefix.push_back(path[index]);
++            }
++            if (prefix.size() == 1) continue;
++            auto& actions = plan[patrolIds[patrol]];
++            actions.clear();
++            appendMoves(prefix, actions);
++            if (usedTime < steps) actions.push_back(-(steps - usedTime));
++            assigned[spots[target].brand] = 1;
++        }
++    }
+     return plan;
+ }
+ 

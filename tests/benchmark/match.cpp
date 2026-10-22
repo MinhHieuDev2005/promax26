@@ -100,10 +100,12 @@ Json run(int argc, char** argv) {
             collected[brand] |= result.brandHit[brand];
         }
         progress = simulator::accumulate_progress(progress, official_day);
-        std::vector<int> fuel;
-        for (const auto& agent : result.end) fuel.push_back(agent.fuel);
+        std::vector<int> fuel, positions;
+        for (const auto& agent : result.end) { fuel.push_back(agent.fuel); positions.push_back(agent.pos); }
         days.push_back({{"day", day}, {"valid", true}, {"elapsed_ms", elapsed},
-                        {"brands", result.brands}, {"bowls", result.balls}, {"fuel", fuel}});
+                        {"brands", result.brands}, {"bowls", result.balls}, {"fuel", fuel},
+                        {"positions", positions}, {"hits", result.brandHit}, {"collected", collected},
+                        {"plan", plan}, {"status", status}, {"stay", result.stay}});
         agents = result.end;
         stays.push_back(result.stay);
     }

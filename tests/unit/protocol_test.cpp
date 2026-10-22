@@ -106,6 +106,36 @@ void check_haui_protocol() {
 
 int main() {
     check_haui_protocol();
+    {
+        using namespace hexa_udon;
+        class Log final : public protocol::OperationLogger {
+        public:
+            std::vector<protocol::OperationLogEntry> entries;
+            void write(const protocol::OperationLogEntry& entry) noexcept override {
+                entries.push_back(entry);
+            }
+        } log;
+        FakeTransport transport;
+        protocol::ApiConfig config;
+        config.base_url = "http://example.invalid";
+        config.token = "private/token";
+        config.minimum_request_interval = std::chrono::milliseconds{0};
+        protocol::ProconApiClient client(transport, config, nullptr, &log);
+        const simulator::DayActionPlan plan{{simulator::WaitAction{40}}};
+        for (const auto code : {protocol::ErrorCode::ConnectionTimeout, protocol::ErrorCode::TransferTimeout}) {
+            transport.results.push_back(protocol::Result<protocol::HttpResponse>::failure(
+                {code, "curl=28 private/token private%2Ftoken"}));
+            const auto result = client.post_actions(plan, std::nullopt, "daily-submit", 1);
+            assert(!result);
+            assert(result.error().submission_attempted.has_value() == (code == protocol::ErrorCode::ConnectionTimeout));
+            assert(result.error().message.find("curl=28") != std::string::npos);
+            assert(result.error().message.find("private") == std::string::npos);
+            assert(log.entries.back().operation == "http-transport");
+            assert(log.entries.back().stop_reason.find("private") == std::string::npos);
+            assert(log.entries.back().stop_reason.find("curl=28") != std::string::npos);
+        }
+        assert(transport.requests.size() == 2);
+    }
     using hexa_udon::protocol::request_id_digest;
     using hexa_udon::protocol::request_id_digest_or_missing;
     const nlohmann::json id = "request-α";

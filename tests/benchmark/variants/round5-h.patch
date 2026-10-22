@@ -1,0 +1,10 @@
+--- a/src/optimizer/optimizer.cpp
++++ b/src/optimizer/optimizer.cpp
+@@ -427,6 +427,7 @@
+         }
+         candidate.key = {candidate.profile.front(), candidate.result.brands + nextDaily,
+                          candidate.result.balls + nextDaily};
++        if (!choosingKinds) candidate.key.insert(candidate.key.begin(), candidate.profile.back());
+         candidate.key.insert(candidate.key.end(), candidate.profile.begin(), candidate.profile.end());
+         long long fuel = 0;
+         for (int agent : patrols) fuel += candidate.result.end[agent].fuel;

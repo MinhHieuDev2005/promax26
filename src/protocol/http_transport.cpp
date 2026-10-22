@@ -63,15 +63,21 @@ std::size_t write_callback(
     }
 }
 
-ErrorCode curl_code(CURLcode code, curl_off_t connect_time_microseconds) {
+int track_request(CURL*, curl_infotype type, char*, std::size_t, void* context) noexcept {
+    if (type == CURLINFO_HEADER_OUT || type == CURLINFO_DATA_OUT) {
+        *static_cast<bool*>(context) = true;
+    }
+    return 0;
+}
+
+ErrorCode curl_code(CURLcode code, bool request_started) {
     switch (code) {
         case CURLE_COULDNT_RESOLVE_HOST:
             return ErrorCode::DnsFailure;
         case CURLE_COULDNT_CONNECT:
             return ErrorCode::ConnectionRefused;
         case CURLE_OPERATION_TIMEDOUT:
-            return connect_time_microseconds == 0 ? ErrorCode::ConnectionTimeout
-                                                  : ErrorCode::TransferTimeout;
+            return request_started ? ErrorCode::TransferTimeout : ErrorCode::ConnectionTimeout;
         case CURLE_RECV_ERROR:
         case CURLE_PARTIAL_FILE:
             return ErrorCode::Disconnected;
@@ -134,6 +140,15 @@ Result<HttpResponse> CurlHttpTransport::execute(const HttpRequest& request) {
     }
 
     std::array<char, CURL_ERROR_SIZE> error_buffer{};
+    bool request_started = false;
+    if (curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, track_request) != CURLE_OK ||
+        curl_easy_setopt(curl, CURLOPT_DEBUGDATA, &request_started) != CURLE_OK ||
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L) != CURLE_OK) {
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        return Result<HttpResponse>::failure(
+            {ErrorCode::Transport, "could not install request tracking"});
+    }
     curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, request.user_agent.c_str());
@@ -157,9 +172,7 @@ Result<HttpResponse> CurlHttpTransport::execute(const HttpRequest& request) {
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start);
     long status = 0;
-    curl_off_t connect_time_microseconds = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
-    curl_easy_getinfo(curl, CURLINFO_CONNECT_TIME_T, &connect_time_microseconds);
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
@@ -171,7 +184,10 @@ Result<HttpResponse> CurlHttpTransport::execute(const HttpRequest& request) {
         std::string message = error_buffer[0] == '\0' ? curl_easy_strerror(code)
                                                        : error_buffer.data();
         return Result<HttpResponse>::failure(
-            {curl_code(code, connect_time_microseconds), message.substr(0, 256)});
+            {curl_code(code, request_started),
+             "curl=" + std::to_string(static_cast<int>(code)) +
+             " elapsedMs=" + std::to_string(elapsed.count()) +
+             " requestStarted=" + (request_started ? "true " : "false ") + message.substr(0, 256)});
     }
     return Result<HttpResponse>::success({status, std::move(write.body), elapsed,
                                           std::move(response_headers.headers)});

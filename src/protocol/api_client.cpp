@@ -200,6 +200,7 @@ Result<HttpResponse> ProconApiClient::request(
         request.headers.push_back("Content-Type: application/json");
     }
     const auto started = std::chrono::steady_clock::now();
+    const auto started_utc = utc_timestamp();
     auto response = transport_.execute(request);
     OperationLogEntry entry;
     entry.timestamp_utc = utc_timestamp();
@@ -213,7 +214,7 @@ Result<HttpResponse> ProconApiClient::request(
     entry.endpoint = path;
     entry.phase = phase;
     entry.attempt = attempt;
-    entry.request_started_utc = entry.timestamp_utc;
+    entry.request_started_utc = started_utc;
     if (deadline) {
         const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
             *deadline - std::chrono::steady_clock::now()).count();
@@ -227,6 +228,7 @@ Result<HttpResponse> ProconApiClient::request(
     } else {
         entry.level = OperationLogEntry::Level::Error;
         entry.response_classification = "transport-error";
+        entry.stop_reason = redact(response.error()).message;
     }
     if (method == HttpMethod::Post) {
         entry.submission_attempted = response
@@ -239,7 +241,10 @@ Result<HttpResponse> ProconApiClient::request(
     // as a successful submission.
     if (!(method == HttpMethod::Post && response && response.value().status >= 200
           && response.value().status < 300)) {
-        if (method == HttpMethod::Post && phase == "daily-submit" && local_submission_id)
+        if (!response) {
+            entry.operation = "http-transport";
+            logger_->write(entry);
+        } else if (method == HttpMethod::Post && phase == "daily-submit" && local_submission_id)
             logger_->update(entry);
         else
             logger_->write(entry);
@@ -317,7 +322,7 @@ Result<bool> ProconApiClient::post_agent_kinds(
         error.submission_attempted = failed_post_outcome(error);
         if (!error.submission_attempted.has_value())
             return Result<bool>::failure(
-                {ErrorCode::UnknownResponse, "POST /agent outcome is unknown"});
+                {ErrorCode::UnknownResponse, "POST /agent outcome is unknown: " + error.message});
         return Result<bool>::failure(std::move(error));
     }
     if (response.value().status != 200) {
@@ -361,7 +366,7 @@ Result<std::int32_t> ProconApiClient::post_actions(
         error.submission_attempted = failed_post_outcome(error);
         if (!error.submission_attempted.has_value()) {
             return Result<std::int32_t>::failure(
-                {ErrorCode::UnknownResponse, "POST outcome is unknown", std::nullopt, std::nullopt});
+                {ErrorCode::UnknownResponse, "POST outcome is unknown: " + error.message, std::nullopt, std::nullopt});
         }
         return Result<std::int32_t>::failure(std::move(error));
     }

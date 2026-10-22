@@ -1,0 +1,52 @@
+--- a/src/optimizer/optimizer.cpp
++++ b/src/optimizer/optimizer.cpp
+@@ -155,12 +155,37 @@
+         return hubCells[rng.nextInt(hubCells.size())];
+     }
+ 
+-    static const int OPS = 9;
+-    static constexpr const char* OP_NAMES[OPS] = {"remove", "patrol", "near", "relocate", "reverse", "orOpt", "refuel", "station", "split"};
++    static const int OPS = 10;
++    static constexpr const char* OP_NAMES[OPS] = {"remove", "patrol", "near", "relocate", "reverse", "orOpt", "refuel", "station", "split", "exchange"};
+ 
+     // 経路か補給車の予定を変える。何も変えられなければ false
+     bool perturb(Day& day, vector<vector<int>>& routes, vector<vector<pair<int, int>>>& sch, int op) {
+         int P = routes.size();
++        if (op == 9) {
++            if (P == 0) return false;
++            const auto present = day.brandsOf(routes);
++            vector<int> targets;
++            for (int brand = 0; brand < B; ++brand)
++                if (!present[brand] && !before[brand]) targets.push_back(brand);
++            if (targets.empty())
++                for (int brand = 0; brand < B; ++brand)
++                    if (!present[brand]) targets.push_back(brand);
++            if (targets.empty()) return false;
++            const int target = targets[rng.nextInt(targets.size())];
++            auto& route = routes[rng.nextInt(P)];
++            while (!day.insertBrand(target, routes, false)) {
++                vector<int> removable;
++                for (int index = 0; index < (int)route.size(); ++index)
++                    if (route[index] >= 0 && before[spots[route[index]].brand])
++                        removable.push_back(index);
++                if (removable.empty())
++                    for (int index = 0; index < (int)route.size(); ++index)
++                        if (route[index] >= 0) removable.push_back(index);
++                if (removable.empty()) return false;
++                route.erase(route.begin() + removable[rng.nextInt(removable.size())]);
++            }
++            return true;
++        }
+         vector<pair<int, int>> visits;
+         for (int pi = 0; pi < P; pi++)
+             for (int k = 0; k < (int)routes[pi].size(); k++) visits.push_back({pi, k});
+@@ -265,7 +290,8 @@
+             } else if (!perturb(day, next, sch, op)) continue;
+             bool schChanged = sch != day.schedule;
+             if (schChanged) day.setSchedule(sch);
+-            bool ok = day.repair(next, need, iter % 10 == 0, rng.nextInt(2) ? LNS_NOISE : 0, schChanged ? nullptr : &cur.routes);
++            const auto required = op == 9 ? day.brandsOf(next) : need;
++            bool ok = day.repair(next, required, op == 9 || iter % 10 == 0, rng.nextInt(2) ? LNS_NOISE : 0, schChanged ? nullptr : &cur.routes);
+             double v = -1e18;
+             Day::Eval e;
+             if (ok) { e = day.evaluate(next); v = e.score; }

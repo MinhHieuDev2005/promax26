@@ -1,0 +1,173 @@
+--- a/src/optimizer/optimizer.cpp
++++ b/src/optimizer/optimizer.cpp
+@@ -376,6 +376,159 @@
+ 
+ }  // namespace
+ 
++vector<vector<int>> chooseOvernight(vector<vector<int>> plan, const vector<Agent>& st,
++        const vector<int>& status, const vector<char>& before, int steps, Timer& budget, double timeMs) {
++    constexpr bool useRollout = false;
++    Timer phase;
++    Router router(status);
++    vector<int> patrols, supplies;
++    vector<vector<int>> brandSpots(B);
++    for (int agent = 0; agent < NA; ++agent) (st[agent].kind == 0 ? patrols : supplies).push_back(agent);
++    for (int spot = 0; spot < S; ++spot) brandSpots[spots[spot].brand].push_back(spot);
++    long long futureSteps = 0;
++    for (int future = today + 1; future < D; ++future) futureSteps += daySteps[future];
++    struct Candidate {
++        vector<vector<int>> plan;
++        DayResult result;
++        vector<long long> key;
++        vector<long long> profile;
++    };
++    int generated = 0, evaluated = 0, changed = 0;
++    double rolloutMs = 0;
++    auto todayScore = [&](const DayResult& result) {
++        auto collected = before;
++        for (int brand = 0; brand < B; ++brand) collected[brand] |= result.brandHit[brand];
++        return make_tuple(count(collected.begin(), collected.end(), 1), result.brands, result.balls);
++    };
++    auto estimate = [&](Candidate& candidate) {
++        auto collected = before;
++        for (int brand = 0; brand < B; ++brand) collected[brand] |= candidate.result.brandHit[brand];
++        int nextDaily = 0;
++        long long horizonSteps = 0;
++        for (int future = today + 1; future < D; ++future) {
++            horizonSteps += daySteps[future];
++            auto reachable = collected;
++            int daily = 0;
++            for (int brand = 0; brand < B; ++brand) {
++                bool possible = false;
++                for (int agent : patrols) {
++                    const auto& state = candidate.result.end[agent];
++                    const auto& table = router.get(state.pos, 1);
++                    const long long allowance = supplies.empty()
++                        ? state.fuel - state.fuel * (futureSteps - horizonSteps) / futureSteps : state.fuel;
++                    for (int spot : brandSpots[brand])
++                        if (table.t[spots[spot].pos] <= horizonSteps && table.f[spots[spot].pos] <= allowance)
++                            possible = true;
++                }
++                if (possible) { reachable[brand] = 1; ++daily; }
++            }
++            if (future == today + 1) nextDaily = daily;
++            candidate.profile.push_back(count(reachable.begin(), reachable.end(), 1));
++        }
++        candidate.key = {candidate.profile.front(), candidate.result.brands + nextDaily,
++                         candidate.result.balls + nextDaily};
++        candidate.key.insert(candidate.key.end(), candidate.profile.begin(), candidate.profile.end());
++        long long fuel = 0;
++        for (int agent : patrols) fuel += candidate.result.end[agent].fuel;
++        candidate.key.push_back(fuel);
++    };
++    auto rollout = [&](Candidate& candidate) {
++        Timer timer;
++        auto collected = before;
++        for (int brand = 0; brand < B; ++brand) collected[brand] |= candidate.result.brandHit[brand];
++        auto forecast = Planner::predicted(status);
++        const auto ownTraffic = statusFromStay(candidate.result.stay, PLAYERS);
++        for (int cell = 0; cell < NC; ++cell) forecast[cell] = max(forecast[cell], ownTraffic[cell]);
++        Router nextRouter(forecast);
++        Day next(candidate.result.end, daySteps[today + 1], today + 1, nextRouter,
++                 patrols, supplies, brandSpots, collected);
++        vector<vector<pair<int, int>>> schedule;
++        for (int agent : supplies) schedule.push_back({{candidate.result.end[agent].pos, INT_MAX}});
++        next.setSchedule(schedule);
++        int missing = 0;
++        const auto routes = next.fill(next.assignBrands(missing), 0);
++        const auto tomorrow = simulateDay(candidate.result.end, next.toPlan(routes), forecast, daySteps[today + 1]);
++        if (!tomorrow.valid) { candidate.key = {-1}; return; }
++        for (int brand = 0; brand < B; ++brand) collected[brand] |= tomorrow.brandHit[brand];
++        candidate.key = {count(collected.begin(), collected.end(), 1),
++                         candidate.result.brands + tomorrow.brands, candidate.result.balls + tomorrow.balls};
++        candidate.key.insert(candidate.key.end(), candidate.profile.begin(), candidate.profile.end());
++        long long fuel = 0;
++        for (int agent : patrols) fuel += tomorrow.end[agent].fuel;
++        candidate.key.push_back(fuel);
++        ++evaluated;
++        rolloutMs += timer.ms();
++    };
++    for (int agent : patrols) {
++        if (budget.ms() >= timeMs || spotAt[st[agent].pos] >= 0
++            || any_of(plan[agent].begin(), plan[agent].end(), [](int action) { return action >= 0; })) continue;
++        Candidate incumbent{plan, simulateDay(st, plan, status, steps), {}, {}};
++        if (!incumbent.result.valid) return plan;
++        estimate(incumbent);
++        vector<Candidate> candidates;
++        set<vector<int>> seen{plan[agent]};
++        const int allowance = supplies.empty()
++            ? st[agent].fuel - st[agent].fuel * futureSteps / (futureSteps + steps) : st[agent].fuel;
++        for (int spot = 0; spot < S && budget.ms() < timeMs; ++spot) {
++            if (before[spots[spot].brand] || incumbent.result.brandHit[spots[spot].brand]) continue;
++            for (int mode = 0; mode < 2 && budget.ms() < timeMs; ++mode) {
++                const auto& table = router.get(st[agent].pos, mode);
++                if (table.f[spots[spot].pos] > st[agent].fuel) continue;
++                const auto path = router.path(st[agent].pos, spots[spot].pos, mode);
++                vector<int> actions;
++                vector<int> arrival{0};
++                int elapsed = 0, usedFuel = 0;
++                for (size_t index = 1; index < path.size(); ++index) {
++                    elapsed += stepCost(path[index - 1], status);
++                    usedFuel += fuelCost(path[index - 1]);
++                    if (elapsed > steps || usedFuel > allowance) break;
++                    actions.push_back(dirTo(path[index - 1], path[index]));
++                    arrival.push_back(elapsed);
++                }
++                for (size_t length : {actions.size() / 2, actions.size()}) {
++                    if (length == 0 || budget.ms() >= timeMs) continue;
++                    elapsed = arrival[length];
++                    vector<int> suffix(actions.begin(), actions.begin() + length);
++                    if (elapsed < steps) suffix.push_back(-(steps - elapsed));
++                    if (!seen.insert(suffix).second) continue;
++                    auto alternative = plan;
++                    alternative[agent] = suffix;
++                    Candidate candidate{alternative, simulateDay(st, alternative, status, steps), {}, {}};
++                    ++generated;
++                    if (!candidate.result.valid || todayScore(candidate.result) < todayScore(incumbent.result)) continue;
++                    estimate(candidate);
++                    candidates.push_back(move(candidate));
++                }
++            }
++        }
++        stable_sort(candidates.begin(), candidates.end(), [](const auto& left, const auto& right) { return left.key > right.key; });
++        if (candidates.size() > 4) candidates.resize(4);
++        if (candidates.empty()) continue;
++        if (useRollout) {
++            if (budget.ms() >= timeMs) break;
++            rollout(incumbent);
++        }
++        Candidate best = incumbent;
++        for (auto& candidate : candidates) {
++            if (budget.ms() >= timeMs) break;
++            if (useRollout) rollout(candidate);
++            if (candidate.key > best.key) best = move(candidate);
++        }
++        cerr << "[waypoint-choice] day=" << today << " agent=" << agent
++             << " from=" << incumbent.result.end[agent].pos << " to=" << best.result.end[agent].pos
++             << " fuel_before=" << incumbent.result.end[agent].fuel << " fuel_after=" << best.result.end[agent].fuel
++             << " wait_key=";
++        for (auto value : incumbent.key) cerr << value << ':';
++        cerr << " chosen_key=";
++        for (auto value : best.key) cerr << value << ':';
++        cerr << '\n';
++        if (best.plan != plan) { plan = move(best.plan); ++changed; }
++    }
++    cerr << "[waypoint] generated=" << generated << " rollouts=" << evaluated
++         << " rollout_ms=" << rolloutMs << " phase_ms=" << phase.ms() << " changed=" << changed << '\n';
++    return plan;
++}
++
+ vector<vector<int>> planDay(const vector<Agent>& st, const vector<int>& status, const vector<char>& before,
+                             int steps, bool lastDay, double timeMs) {
+     if (before.size() != static_cast<size_t>(B)
+@@ -388,7 +541,9 @@
+         day0Plan.reset();
+     }
+     if (warm) cerr << "[solver] 1 日目が始まる前に作った解から始める\n";
+-    auto plan = solveDay(st, status, steps, lastDay, timeMs, warm, before).second;
++    Timer budget;
++    auto plan = solveDay(st, status, steps, lastDay, lastDay ? timeMs : timeMs * 0.8, warm, before).second;
++    if (!lastDay && budget.ms() < timeMs) plan = chooseOvernight(move(plan), st, status, before, steps, budget, timeMs);
+     if (!choosingKinds) { yesterdayStatus = status; yesterdayDay = today; }
+     return plan;
+ }

@@ -1,0 +1,11 @@
+--- a/src/planner/day_planner.cpp
++++ b/src/planner/day_planner.cpp
+@@ -331,7 +331,7 @@
+     for (int pi = 0; pi < P; pi++) if (!prev || (*prev)[pi] != routes[pi]) prune(pi, routes[pi]);
+     vector<char> has = brandsOf(routes);
+     for (int b : brandOrder)
+-        if (needBrands[b] && !has[b] && !insertBrand(b, routes, rng.nextInt(5) == 0)) return false;
++        if (needBrands[b] && !has[b]) insertBrand(b, routes, rng.nextInt(5) == 0);
+     if (tryMissing) {
+         has = brandsOf(routes);
+         for (int b : brandOrder) if (!has[b]) insertBrand(b, routes, false);

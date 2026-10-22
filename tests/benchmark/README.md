@@ -1,5 +1,10 @@
 # Offline solver experiments (Linux / WSL)
 
+Round-3 algorithm investigation and independent prototype patches are documented
+in `docs/solver-research-round3.md` and `tests/benchmark/variants/`. The prototypes
+are not enabled in the production solver. `brand_lock_check` and `overnight_check`
+are optional CMake targets reproducing the two structural counterexamples.
+
 This harness never connects to a competition server and does not replace the GUI binary.
 It scores complete synthetic single-team matches using the existing simulator.
 

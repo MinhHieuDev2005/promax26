@@ -1,0 +1,17 @@
+--- a/src/optimizer/optimizer.cpp
++++ b/src/optimizer/optimizer.cpp
+@@ -326,11 +326,13 @@
+ // スレッド 0 は 1 本で解くときと同じ種を使う
+ pair<Planner::Solution, vector<vector<int>>> solveDay(const vector<Agent>& st, const vector<int>& status, int steps,
+                                                       bool lastDay, double timeMs, const optional<Planner::Solution>& warm, const vector<char>& before) {
+-    int T = max(1, threads);
++    int T = choosingKinds ? 1 : max(1, threads);
+     if (T == 1) {
++        const Rng savedRng = rng;
+         Planner p(st, status, steps, lastDay, before);
+         p.warm = warm;
+         auto plan = p.plan(timeMs);
++        if (choosingKinds) rng = savedRng;
+         return {p.result, plan};
+     }
+     Planner::Emitted emitted;
